@@ -9,9 +9,9 @@ import syspro.tm.parser.{AnySyntaxKind, SyntaxKind, SyntaxNode}
  * Represents IR of spc compiler parser
  * Every IR atom should extend ParsingTree
  */
-sealed trait ParsingTree(syntaxKind: SyntaxKind) extends SyntaxNode with AnySyntaxKind {
+sealed trait ParsingTree(syntaxKind: AnySyntaxKind) extends SyntaxNode with AnySyntaxKind {
   // every Parsing tree part should satisfy SyntaxNode contract
-  override def kind(): SyntaxKind = syntaxKind
+  override def kind(): AnySyntaxKind = syntaxKind
   override def slotCount(): Int = rank()
   override def slot(index: Int): SyntaxNode = apply(index).get
   override def token(): Token = null
@@ -34,7 +34,7 @@ sealed trait ParsingTree(syntaxKind: SyntaxKind) extends SyntaxNode with AnySynt
  *
  * So it have at least one descendant
  */
-case class Branch(syntaxKind: SyntaxKind, _descendants: ParsingTree*) extends ParsingTree(syntaxKind) {
+case class Branch(syntaxKind: AnySyntaxKind, _descendants: ParsingTree*) extends ParsingTree(syntaxKind) {
   private val descendants: List[ParsingTree]  = _descendants.toList
   override def rank(): Int = descendants.size
   override def apply(index: Int): Option[ParsingTree] = if (index < rank()) Some(descendants(index)) else None
@@ -45,7 +45,7 @@ case class Branch(syntaxKind: SyntaxKind, _descendants: ParsingTree*) extends Pa
  *
  * Corresponds to Terminal of grammar
  */
-case class Leaf(syntaxKind: SyntaxKind, tkn: Token) extends ParsingTree(syntaxKind) {
+case class Leaf(syntaxKind: AnySyntaxKind, tkn: Token) extends ParsingTree(syntaxKind) {
   override def rank(): Int = 0
   override def apply(index: Int): Option[ParsingTree] = None
   override def token(): Token = tkn

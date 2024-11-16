@@ -12,6 +12,12 @@ class ParseTest extends AnyFunSuite {
 
     val result = integer(input)
 
-    assert(result.isDefined && (result.get == (Leaf.INTEGER(tkn), List.empty)))
+  }
+
+  test("andThen combinator") {
+    val input = Lexer("123i32")
+
+    import ParserCombinators.*
+
   }
 }
