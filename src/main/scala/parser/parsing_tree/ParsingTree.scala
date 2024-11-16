@@ -50,6 +50,7 @@ case class INTEGER(tkn: Token)      extends Leaf(tkn)
 case class STRING(tkn: Token)       extends Leaf(tkn)
 
 sealed trait Symbol {}
+
 case class DOT(tkn: Token)          extends Symbol with Leaf(tkn)
 case class COLON(tkn: Token)        extends Symbol with Leaf(tkn)
 case class COMMA(tkn: Token)        extends Symbol with Leaf(tkn)
@@ -58,6 +59,16 @@ case class MINUS(tkn: Token)        extends Symbol with Leaf(tkn)
 case class ASTERISK(tkn: Token)     extends Symbol with Leaf(tkn)
 case class SLASH(tkn: Token)        extends Symbol with Leaf(tkn)
 // TODO: add other symbols to IR
+
+case object DOT extends Symbol
+case object COLON extends Symbol
+case object COMMA extends Symbol
+case object PLUS extends Symbol
+case object MINUS extends Symbol
+case object ASTERISK extends Symbol
+case object SLASH extends Symbol
+// TODO: add other case object of symbols
+// TODO: maybe usage of case objects is design issue here
 
 sealed trait Expression extends Branch {}
 sealed trait BinaryExpression(left: Expression, right: Expression) extends Expression {
@@ -75,43 +86,56 @@ case class SUBTRACT(leaf: Expression, right: Expression) extends  BinaryExpressi
 
 object Symbol {
 
-  // TODO: turn this methods to corresponding conversions or Partial
+
   /**
    * Construct Symbol Leaf of ParsingTree IR
    * @param token token from Leaf constructed
-   * @return
+   * @return case object for corresponding symbol
    */
-  def of(token: Token): Symbol = token.toSyntaxKind.asInstanceOf[syspro.tm.lexer.Symbol] match {
-    case syspro.tm.lexer.Symbol.DOT => DOT(token)
-    case syspro.tm.lexer.Symbol.COLON => COLON(token)
-    case syspro.tm.lexer.Symbol.COMMA => COMMA(token)
-    case syspro.tm.lexer.Symbol.PLUS => PLUS(token)
-    case syspro.tm.lexer.Symbol.MINUS => MINUS(token)
-    case syspro.tm.lexer.Symbol.ASTERISK => ASTERISK(token)
-    case syspro.tm.lexer.Symbol.SLASH => SLASH(token)
-    case syspro.tm.lexer.Symbol.PERCENT => ???
-    case syspro.tm.lexer.Symbol.EXCLAMATION => ???
-    case syspro.tm.lexer.Symbol.TILDE => ???
-    case syspro.tm.lexer.Symbol.AMPERSAND => ???
-    case syspro.tm.lexer.Symbol.BAR => ???
-    case syspro.tm.lexer.Symbol.AMPERSAND_AMPERSAND => ???
-    case syspro.tm.lexer.Symbol.BAR_BAR => ???
-    case syspro.tm.lexer.Symbol.CARET => ???
-    case syspro.tm.lexer.Symbol.LESS_THAN => ???
-    case syspro.tm.lexer.Symbol.LESS_THAN_EQUALS => ???
-    case syspro.tm.lexer.Symbol.GREATER_THAN => ???
-    case syspro.tm.lexer.Symbol.GREATER_THAN_EQUALS => ???
-    case syspro.tm.lexer.Symbol.LESS_THAN_LESS_THAN => ???
-    case syspro.tm.lexer.Symbol.GREATER_THAN_GREATER_THAN => ???
-    case syspro.tm.lexer.Symbol.OPEN_BRACKET => ???
-    case syspro.tm.lexer.Symbol.CLOSE_BRACKET => ???
-    case syspro.tm.lexer.Symbol.OPEN_PAREN => ???
-    case syspro.tm.lexer.Symbol.CLOSE_PAREN => ???
-    case syspro.tm.lexer.Symbol.EQUALS => ???
-    case syspro.tm.lexer.Symbol.EQUALS_EQUALS => ???
-    case syspro.tm.lexer.Symbol.EXCLAMATION_EQUALS => ???
-    case syspro.tm.lexer.Symbol.QUESTION => ???
-    case syspro.tm.lexer.Symbol.BOUND => ???
-  }
+  val of: PartialFunction[Token, Symbol] = (token: Token) => token match
+    case _ if token.toSyntaxKind.isInstanceOf[syspro.tm.lexer.Symbol] => {
+      val symbol = token.toSyntaxKind.asInstanceOf[syspro.tm.lexer.Symbol]
+      symbol match {
+        case syspro.tm.lexer.Symbol.DOT => DOT
+        case syspro.tm.lexer.Symbol.COLON => COLON
+        case syspro.tm.lexer.Symbol.COMMA => COMMA
+        case syspro.tm.lexer.Symbol.PLUS => PLUS
+        case syspro.tm.lexer.Symbol.MINUS => MINUS
+        case syspro.tm.lexer.Symbol.ASTERISK => ASTERISK
+        case syspro.tm.lexer.Symbol.SLASH => SLASH
+        case syspro.tm.lexer.Symbol.PERCENT => ???
+        case syspro.tm.lexer.Symbol.EXCLAMATION => ???
+        case syspro.tm.lexer.Symbol.TILDE => ???
+        case syspro.tm.lexer.Symbol.AMPERSAND => ???
+        case syspro.tm.lexer.Symbol.BAR => ???
+        case syspro.tm.lexer.Symbol.AMPERSAND_AMPERSAND => ???
+        case syspro.tm.lexer.Symbol.BAR_BAR => ???
+        case syspro.tm.lexer.Symbol.CARET => ???
+        case syspro.tm.lexer.Symbol.LESS_THAN => ???
+        case syspro.tm.lexer.Symbol.LESS_THAN_EQUALS => ???
+        case syspro.tm.lexer.Symbol.GREATER_THAN => ???
+        case syspro.tm.lexer.Symbol.GREATER_THAN_EQUALS => ???
+        case syspro.tm.lexer.Symbol.LESS_THAN_LESS_THAN => ???
+        case syspro.tm.lexer.Symbol.GREATER_THAN_GREATER_THAN => ???
+        case syspro.tm.lexer.Symbol.OPEN_BRACKET => ???
+        case syspro.tm.lexer.Symbol.CLOSE_BRACKET => ???
+        case syspro.tm.lexer.Symbol.OPEN_PAREN => ???
+        case syspro.tm.lexer.Symbol.CLOSE_PAREN => ???
+        case syspro.tm.lexer.Symbol.EQUALS => ???
+        case syspro.tm.lexer.Symbol.EQUALS_EQUALS => ???
+        case syspro.tm.lexer.Symbol.EXCLAMATION_EQUALS => ???
+        case syspro.tm.lexer.Symbol.QUESTION => ???
+        case syspro.tm.lexer.Symbol.BOUND => ???
+      }
+    }
+
+  def of(symbol: Symbol, token: Token): Symbol = symbol match
+    case DOT => DOT(token)
+    case COLON => COLON(token)
+    case COMMA => COMMA(token)
+    case PLUS => PLUS(token)
+    case MINUS => MINUS(token)
+    case ASTERISK => ASTERISK(token)
+    case SLASH => SLASH(token)
 }
 
