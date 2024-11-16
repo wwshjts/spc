@@ -53,12 +53,23 @@ case class Leaf(syntaxKind: SyntaxKind, tkn: Token) extends ParsingTree(syntaxKi
 
 
 object Leaf {
-  def BAD(tkn: Token): Leaf = Leaf(SyntaxKind.BAD, tkn)
-  def INDENT(tkn: Token): Leaf = Leaf(SyntaxKind.INDENT, tkn)
-  def DEDENT(tkn: Token): Leaf = Leaf(SyntaxKind.DEDENT, tkn)
-  def IDENTIFIER(tkn: Token): Leaf = Leaf(SyntaxKind.BOOLEAN, tkn)
-  def BOOLEAN(tkn: Token): Leaf = Leaf(SyntaxKind.BOOLEAN, tkn)
-  def INTEGER(tkn: Token): Leaf = Leaf(SyntaxKind.INTEGER, tkn)
-  def RUNE(tkn: Token): Leaf = Leaf(SyntaxKind.RUNE, tkn)
-  def STRING(tkn: Token): Leaf = Leaf(SyntaxKind.STRING, tkn)
+  def BAD(tkn: Token): Leaf         = new Leaf(SyntaxKind.BAD, tkn)
+  def INDENT(tkn: Token): Leaf      = new Leaf(SyntaxKind.INDENT, tkn)
+  def DEDENT(tkn: Token): Leaf      = new Leaf(SyntaxKind.DEDENT, tkn)
+  def IDENTIFIER(tkn: Token): Leaf  = new Leaf(SyntaxKind.BOOLEAN, tkn)
+  def BOOLEAN(tkn: Token): Leaf     = new Leaf(SyntaxKind.BOOLEAN, tkn)
+  def INTEGER(tkn: Token): Leaf     = new Leaf(SyntaxKind.INTEGER, tkn)
+  def RUNE(tkn: Token): Leaf        = new Leaf(SyntaxKind.RUNE, tkn)
+  def STRING(tkn: Token): Leaf      = new Leaf(SyntaxKind.STRING, tkn)
+
+  def apply(syntaxKind: SyntaxKind, tkn: Token): Leaf = syntaxKind match {
+    case SyntaxKind.BAD         => BAD(tkn)
+    case SyntaxKind.INDENT      => INDENT(tkn)
+    case SyntaxKind.DEDENT      => DEDENT(tkn)
+    case SyntaxKind.IDENTIFIER  => IDENTIFIER(tkn)
+    case SyntaxKind.BOOLEAN     => BOOLEAN(tkn)
+    case SyntaxKind.INTEGER     => INTEGER(tkn)
+    case SyntaxKind.RUNE        => RUNE(tkn)
+    case SyntaxKind.STRING      => STRING(tkn)
+  }
 }

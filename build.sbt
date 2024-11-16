@@ -7,3 +7,7 @@ lazy val root = (project in file("."))
     name := "spc",
     idePackagePrefix := Some("org.syspro.spc")
   )
+
+libraryDependencies ++= Seq(
+  "org.scalatest" %% "scalatest" % "3.2.9" % Test
+)
