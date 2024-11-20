@@ -42,21 +42,21 @@ case class INDENT(tkn: Token)       extends Leaf(tkn)
 case class DEDENT(tkn: Token)       extends Leaf(tkn)
 
 case class IDENTIFIER(tkn: Token)   extends Leaf(tkn)
-case class RUNE(tkn: Token)
+case class RUNE(tkn: Token)         extends Leaf(tkn)
 
 // Built-in types
-case class BOOLEAN(tkn: Token)      extends Leaf(tkn) with BuiltInType
-case class INTEGER(tkn: Token)      extends Leaf(tkn) with BuiltInType
-case class STRING(tkn: Token)       extends Leaf(tkn) with BuiltInType
+case class BOOLEAN(tkn: Token)      extends Leaf(tkn)
+case class INTEGER(tkn: Token)      extends Leaf(tkn)
+case class STRING(tkn: Token)       extends Leaf(tkn)
 
 // Symbols
-case class DOT(tkn: Token)          extends Symbol with Leaf(tkn)
-case class COLON(tkn: Token)        extends Symbol with Leaf(tkn)
-case class COMMA(tkn: Token)        extends Symbol with Leaf(tkn)
-case class PLUS(tkn: Token)         extends Symbol with Leaf(tkn)
-case class MINUS(tkn: Token)        extends Symbol with Leaf(tkn)
-case class ASTERISK(tkn: Token)     extends Symbol with Leaf(tkn)
-case class SLASH(tkn: Token)        extends Symbol with Leaf(tkn)
+case class DOT(tkn: Token)          extends Leaf(tkn)
+case class COLON(tkn: Token)        extends Leaf(tkn)
+case class COMMA(tkn: Token)        extends Leaf(tkn)
+case class PLUS(tkn: Token)         extends Leaf(tkn)
+case class MINUS(tkn: Token)        extends Leaf(tkn)
+case class ASTERISK(tkn: Token)     extends Leaf(tkn)
+case class SLASH(tkn: Token)        extends Leaf(tkn)
 // TODO: add other symbols to IR
 
 
@@ -76,23 +76,50 @@ case class SUBTRACT(leaf: Expression, right: Expression) extends  BinaryExpressi
 
 
 // Syntax
-sealed trait Syntax
-case object INDENT      extends Syntax
-case object DEDENT      extends Syntax
+sealed trait Syntax {
+  // TODO: def kind(): AnySyntaxKind
 
-case object RUNE        extends Syntax
-case object IDENTIFIER  extends Syntax
+  // TODO
+  def of(token: Token): Leaf = {
+    this match {
+      case INDENT => INDENT(token)
+      case DEDENT => DEDENT(token)
+      case RUNE => RUNE(token)
+      case IDENTIFIER => IDENTIFIER(token)
+      case BAD => BAD(token)
+      case symbol: Symbol => symbol match {
+        case DOT => DOT(token)
+        case COLON => COLON(token)
+        case COMMA => COMMA(token)
+        case PLUS => PLUS(token)
+        case MINUS => MINUS(token)
+        case ASTERISK => ASTERISK(token)
+        case SLASH => SLASH(token)
+      }
+      case t: BuiltInType => t match
+        case INTEGER => INTEGER(token)
+        case BOOLEAN => BOOLEAN(token)
+        case STRING => STRING(token)
+    }
 
-case object BAD         extends Syntax
+  }
+}
+case object INDENT        extends Syntax
+case object DEDENT        extends Syntax
 
-sealed trait Symbol   extends Syntax
-case object DOT       extends Symbol
-case object COLON     extends Symbol
-case object COMMA     extends Symbol
-case object PLUS      extends Symbol
-case object MINUS     extends Symbol
-case object ASTERISK  extends Symbol
-case object SLASH     extends Symbol
+case object RUNE          extends Syntax
+case object IDENTIFIER    extends Syntax
+
+case object BAD           extends Syntax
+
+sealed trait Symbol       extends Syntax
+case object DOT           extends Symbol
+case object COLON         extends Symbol
+case object COMMA         extends Symbol
+case object PLUS          extends Symbol
+case object MINUS         extends Symbol
+case object ASTERISK      extends Symbol
+case object SLASH         extends Symbol
 // TODO: add all Symbols
 
 sealed trait BuiltInType  extends Syntax
