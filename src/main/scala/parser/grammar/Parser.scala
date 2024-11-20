@@ -2,7 +2,7 @@ package org.syspro.spc
 package parser.grammar
 
 import org.syspro.spc.parser.grammar.Result.{Failure, Success}
-import org.syspro.spc.parser.parsing_tree.{BuiltInType, Leaf, PLUS, ParsingTree, Symbol, Syntax}
+import org.syspro.spc.parser.parsing_tree.{BuiltInType, INTEGER, Leaf, PLUS, ParsingTree, Symbol, Syntax}
 import org.syspro.spc.parser.token.SyntaxKindConverter
 import syspro.tm.lexer.{BadToken, Token}
 import syspro.tm.parser.SyntaxKind
@@ -27,11 +27,14 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
   def apply(input: List[Token]): Result[A]
 
   /**
-   * @param b
-   * @tparam U
-   * @return returned parser
+   * Simple andThen combinator
+   *
+   * If parser this succeeds, then runs parser b on the remaining input
+   * @param b parser which runs after Success of 'this' parser
+   * @tparam U thing, that parser p parse
+   * @return parser which parse (A, U)
    */
-  def ~>[U](b: Parser[U]): Parser[(A, U)] = {
+  def ~[U](b: Parser[U]): Parser[(A, U)] = {
     val a: Parser[A] = this // just for beauty of code
 
     (input: List[Token]) => {
@@ -51,6 +54,26 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
     }
   }
 
+
+  /**
+   * orElse parser combinator
+   * @tparam U should be super type of this parser type parameter
+   * @return result of first parser if it succeeds, else if b succeeds returns result of b,
+   *         otherwise fails
+   */
+  def <|> [U >: A](b: Parser[U]): Parser[U] = {
+    val a: Parser[A] = this // just for code beauty
+
+    (input: List[Token]) => {
+      val res_a = a(input)
+
+      res_a match
+        case Result.Success(_, _) => res_a
+        case Result.Failure(msg) => b(input)
+    }
+  }
+
+
   // TODO: make nice error handling
 }
 
@@ -66,9 +89,6 @@ object BasicSyntaxParser {
   }
 }
 
-
-val plus = BasicSyntaxParser(PLUS)
-
 /*
 primitive_expr = INTEGER_EXPR | ... | RUNE_EXPR
 
@@ -78,7 +98,7 @@ ADD_EXPR = (EXPR PLUS) EXPR : Parser[ADD_EXPR]
 
 INTEGER_EXPR = INTEGER
 
-E = E + E | E * E | T
+E = binOP
 M = E * E
 T = INTEGER
 

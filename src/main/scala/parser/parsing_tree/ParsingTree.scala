@@ -9,7 +9,7 @@ import syspro.tm.parser.{AnySyntaxKind, SyntaxKind, SyntaxNode}
  * Represents IR of spc compiler parser
  * Every IR atom should extend ParsingTree
  */
-sealed trait ParsingTree extends SyntaxNode with AnySyntaxKind {
+sealed trait ParsingTree extends SyntaxNode {
   // every Parsing tree part should satisfy SyntaxNode contract
   override def kind(): SyntaxKind = ???
   override def slotCount(): Int = rank()
