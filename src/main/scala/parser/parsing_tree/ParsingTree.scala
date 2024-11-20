@@ -37,7 +37,7 @@ sealed trait Leaf(tkn: Token) extends ParsingTree {
 
 case class BAD(tkn: Token)          extends Leaf(tkn)
 
-// Indentation
+// Indentation and other syntax
 case class INDENT(tkn: Token)       extends Leaf(tkn)
 case class DEDENT(tkn: Token)       extends Leaf(tkn)
 
@@ -45,12 +45,11 @@ case class IDENTIFIER(tkn: Token)   extends Leaf(tkn)
 case class RUNE(tkn: Token)
 
 // Built-in types
-case class BOOLEAN(tkn: Token)      extends Leaf(tkn)
-case class INTEGER(tkn: Token)      extends Leaf(tkn)
-case class STRING(tkn: Token)       extends Leaf(tkn)
+case class BOOLEAN(tkn: Token)      extends Leaf(tkn) with BuiltInType
+case class INTEGER(tkn: Token)      extends Leaf(tkn) with BuiltInType
+case class STRING(tkn: Token)       extends Leaf(tkn) with BuiltInType
 
-sealed trait Symbol {}
-
+// Symbols
 case class DOT(tkn: Token)          extends Symbol with Leaf(tkn)
 case class COLON(tkn: Token)        extends Symbol with Leaf(tkn)
 case class COMMA(tkn: Token)        extends Symbol with Leaf(tkn)
@@ -60,15 +59,6 @@ case class ASTERISK(tkn: Token)     extends Symbol with Leaf(tkn)
 case class SLASH(tkn: Token)        extends Symbol with Leaf(tkn)
 // TODO: add other symbols to IR
 
-case object DOT extends Symbol
-case object COLON extends Symbol
-case object COMMA extends Symbol
-case object PLUS extends Symbol
-case object MINUS extends Symbol
-case object ASTERISK extends Symbol
-case object SLASH extends Symbol
-// TODO: add other case object of symbols
-// TODO: maybe usage of case objects is design issue here
 
 sealed trait Expression extends Branch {}
 sealed trait BinaryExpression(left: Expression, right: Expression) extends Expression {
@@ -84,9 +74,35 @@ sealed trait BinaryExpression(left: Expression, right: Expression) extends Expre
 case class ADD(left: Expression, right: Expression) extends BinaryExpression(left, right)
 case class SUBTRACT(leaf: Expression, right: Expression) extends  BinaryExpression(leaf, right)
 
+
+// Syntax
+sealed trait Syntax
+case object INDENT      extends Syntax
+case object DEDENT      extends Syntax
+
+case object RUNE        extends Syntax
+case object IDENTIFIER  extends Syntax
+
+case object BAD         extends Syntax
+
+sealed trait Symbol   extends Syntax
+case object DOT       extends Symbol
+case object COLON     extends Symbol
+case object COMMA     extends Symbol
+case object PLUS      extends Symbol
+case object MINUS     extends Symbol
+case object ASTERISK  extends Symbol
+case object SLASH     extends Symbol
+// TODO: add all Symbols
+
+sealed trait BuiltInType  extends Syntax
+case object INTEGER       extends BuiltInType
+case object BOOLEAN       extends BuiltInType
+case object STRING        extends BuiltInType
+
+
+/*
 object Symbol {
-
-
   /**
    * Construct Symbol Leaf of ParsingTree IR
    * @param token token from Leaf constructed
@@ -138,4 +154,4 @@ object Symbol {
     case ASTERISK => ASTERISK(token)
     case SLASH => SLASH(token)
 }
-
+ */
