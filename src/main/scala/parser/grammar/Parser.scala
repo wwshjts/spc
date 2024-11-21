@@ -1,15 +1,18 @@
 package org.syspro.spc
 package parser.grammar
 
+import scala.Conversion
+
 import org.syspro.spc.parser.grammar.Result.{Failure, Success}
-import org.syspro.spc.parser.parsing_tree.{BuiltInType, INTEGER, Leaf, PLUS, ParsingTree, Symbol, Syntax}
+import org.syspro.spc.parser.parsing_tree.{BinaryExpression, BuiltInType, INTEGER, Leaf, MINUS, PLUS, ParsingTree, STRING, Symbol, Syntax}
 import org.syspro.spc.parser.token.SyntaxKindConverter
 import syspro.tm.lexer.{BadToken, Token}
 import syspro.tm.parser.SyntaxKind
 
 enum Result[+A] {
   case Success(result: A, remain_input: List[Token])
-  case Failure(string: Predef.String)
+  case Failure(msg: Predef.String)
+  // TODO for better ERROR handling maybe I should add Fatal here
 }
 
 /**
@@ -20,7 +23,11 @@ enum Result[+A] {
  * To lists of pairs
  *
  * of things and syspro.tm.lexer.Token
- * @tparam A
+ *
+ * Very simple combinator lib
+ *
+ * Doesn't support packard parser, so you need to eliminate left recursion in grammar
+ * @tparam A Return type of parser
  */
 trait Parser[+A] extends (List[Token] => Result[A]) {
 
@@ -54,6 +61,27 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
     }
   }
 
+  // TODO: doc
+  def ~>[U](b: Parser[U]): Parser[U] = {
+    val a: Parser[A] = this // just for beauty of code
+
+    (input: List[Token]) => {
+      val res_a = a(input)
+
+      res_a match {
+        case Failure(msg) => Failure(msg)
+        case Success(ir_a, remain_input_a) => {
+          val res_b = b(remain_input_a)
+
+          res_b match {
+            case Failure(msg) => Failure(msg)
+            case Success(ir_b, remain_input_b) => Success((ir_b), remain_input_b)
+          }
+        }
+      }
+    }
+  }
+
 
   /**
    * orElse parser combinator
@@ -73,11 +101,35 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
     }
   }
 
+  def map[U](f: A => U): Parser[U] = {
+    val parser: Parser[A] = this // just for code beauty
 
-  // TODO: make nice error handling
+    (input: List[Token]) => {
+      val res = parser(input)
+
+      res match
+        case Result.Success(result, remain_input) => Result.Success(f(result), remain_input)
+        case Result.Failure(msg) => Failure(msg)
+    }
+  }
+
+  /**
+   * Map parser combinator
+   * @param A
+   * @tparam U
+   * @return
+   */
+  def ^^[U] (f: A => U): Parser[U] = map(f)
+
+  // TODO: add do notation here
+  // apply this parser to input while parser succeeds and input has tokens
+  def |*(): Parser[A] = ???
+
+  // TODO: make nice error handling can I?
 }
 
-// TODO: add conversion from strings
+
+// TODO: add doc
 object BasicSyntaxParser {
   def apply(toMatch: Syntax): Parser[Leaf] = {
     (input: List[Token]) => {
@@ -87,7 +139,16 @@ object BasicSyntaxParser {
       if (toMatch == syntax) Success(toMatch.of(tkn), input.tail) else Failure(s"Can't parse Token $tkn, expected syntax kind $toMatch, found $syntax")
     }
   }
+
+  given Conversion[Predef.String, Parser[Leaf]] with
+    def apply(string: Predef.String): Parser[Leaf] = {
+      // TODO: Handle match exception
+      BasicSyntaxParser(Symbol(string))
+    }
 }
+
+// something like this, or add conversion from lists
+val primary: Parser[Leaf] = BasicSyntaxParser(INTEGER) <|> BasicSyntaxParser(STRING)
 
 /*
 primitive_expr = INTEGER_EXPR | ... | RUNE_EXPR
@@ -96,10 +157,6 @@ ADD_EXPR = (EXPR PLUS) EXPR : Parser[ADD_EXPR]
             Parser[(EXPR, PLUS)]
               Parser[((EXPR, PLUS), EXPR)] :>> Parser[ADD_EXPR]
 
-INTEGER_EXPR = INTEGER
-
-E = binOP
-M = E * E
-T = INTEGER
+val unary: Parser[Unary] = ( ("!" <|> "-") ~ unary ) <|> primary
 
  */
