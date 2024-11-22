@@ -120,7 +120,7 @@ object SyntaxKindConverter {
     // TODO:
     case lexer.Symbol.PERCENT => ???
     case lexer.Symbol.EXCLAMATION => ???
-    case lexer.Symbol.TILDE => ???
+    case lexer.Symbol.TILDE => parsing_tree.TILDE
     case lexer.Symbol.AMPERSAND => ???
     case lexer.Symbol.BAR => ???
     case lexer.Symbol.AMPERSAND_AMPERSAND => ???

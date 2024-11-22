@@ -58,6 +58,7 @@ case class PLUS(tkn: Token)         extends Leaf(tkn)
 case class MINUS(tkn: Token)        extends Leaf(tkn)
 case class ASTERISK(tkn: Token)     extends Leaf(tkn)
 case class SLASH(tkn: Token)        extends Leaf(tkn)
+case class TILDE(tkn: Token)        extends Leaf(tkn)
 // TODO: add other symbols to IR
 
 /**
@@ -73,10 +74,10 @@ case class Negate(op: ParsingTree)        extends Unary(op)
 case class UPlus(op: ParsingTree)         extends Unary(op)
 case class BitwiseNot(op: ParsingTree)    extends Unary(op)
 
-case class StringLiteral(op: STRING)      extends Unary(op)
-case class IntegerLiteral(op: INTEGER)    extends Unary(op)
-case class RuneLiteral(op: RUNE)          extends Unary(op)
-case class BooleanLiteral(op: BOOLEAN)    extends Unary(op)
+case class StringLiteral(op: Leaf)        extends Unary(op)
+case class IntegerLiteral(op: Leaf)       extends Unary(op)
+case class RuneLiteral(op: Leaf)          extends Unary(op)
+case class BooleanLiteral(op: Leaf)       extends Unary(op)
 
 case class GroupBy(op: ParsingTree)       extends Unary(op)
 
@@ -114,6 +115,7 @@ sealed trait Syntax {
         case MINUS => MINUS(token)
         case ASTERISK => ASTERISK(token)
         case SLASH => SLASH(token)
+        case TILDE => TILDE(token)
       }
       case t: BuiltInType => t match
         case INTEGER => INTEGER(token)
@@ -140,6 +142,7 @@ case object PLUS          extends Symbol
 case object MINUS         extends Symbol
 case object ASTERISK      extends Symbol
 case object SLASH         extends Symbol
+case object TILDE         extends Symbol
 // TODO: add all Symbols
 
 // TODO: Do i really need hierachy for built-in's???
@@ -158,5 +161,6 @@ object Symbol {
       case "-" => MINUS
       case "*" => ASTERISK
       case "/" => SLASH
+      case "~" => TILDE
   }
 }

@@ -43,7 +43,7 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
    * @tparam U thing, that parser p parse
    * @return parser which parse (A, U)
    */
-  def ~[U](b: Parser[U]): Parser[(A, U)] = {
+  def ~[U](b: => Parser[U]): Parser[(A, U)] = {
     val a: Parser[A] = this // just for beauty of code
 
     (input: List[Token]) => {
@@ -52,8 +52,9 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
       res_a match {
         case Failure(msg) => Failure(msg)
         case Success(ir_a, remain_input_a) => {
+          println(b)
           val res_b = b(remain_input_a)
-
+          println(remain_input_a)
           res_b match {
             case Failure(msg) => Failure(msg)
             case Success(ir_b, remain_input_b) => Success((ir_a, ir_b), remain_input_b)
@@ -64,7 +65,7 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
   }
 
   // TODO: doc
-  def ~>[U](b: Parser[U]): Parser[U] = {
+  def ~>[U](b: => Parser[U]): Parser[U] = {
     val a: Parser[A] = this // just for beauty of code
 
     (input: List[Token]) => {
@@ -84,7 +85,7 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
     }
   }
 
-  def <~[U](b: Parser[U]): Parser[A] = {
+  def <~[U](b: => Parser[U]): Parser[A] = {
     val a: Parser[A] = this // just for beauty of code
 
     (input: List[Token]) => {
@@ -111,7 +112,7 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
    * @return result of first parser if it succeeds, else if b succeeds returns result of b,
    *         otherwise fails
    */
-  def <|> [U >: A](b: Parser[U]): Parser[U] = {
+  def <|> [U >: A](b: => Parser[U]): Parser[U] = {
     val a: Parser[A] = this // just for code beauty
 
     (input: List[Token]) => {
@@ -151,7 +152,7 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
    *
    * @return
    */
-  def |*(): Parser[Seq[A]] = {
+  def many(): Parser[List[A]] = {
     val p: Parser[A] = this // just for code beauty
 
     (input: List[Token]) => {
@@ -167,22 +168,27 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
 
 
 // TODO: add doc
-object BasicSyntaxParser {
-  def apply[A <: Syntax, B <: Leaf](toMatch: A): Parser[B] = {
+object BasicLeafParser {
+  /**
+   * @param toMatch syntax of consumed token
+   * @return parser, that consumes one input terminal token, return Leaf node for this token
+   */
+  def apply(toMatch: Syntax): Parser[Leaf] = {
 
     (input: List[Token]) => {
       val tkn = input.head
       val syntax: Syntax = SyntaxKindConverter(tkn)
 
-      if (toMatch == syntax) Success(toMatch.of(tkn).asInstanceOf[B], input.tail) else Failure(s"Can't parse Token $tkn, expected syntax kind $toMatch, found $syntax")
+      if (toMatch == syntax) Success(toMatch.of(tkn), input.tail) else Failure(s"Can't parse Token $tkn, expected syntax kind $toMatch, found $syntax")
     }
 
   }
 
-  given Conversion[Predef.String, Parser[Symbol]] with
-    def apply(symbol: Predef.String): Parser[Symbol] = {
-      BasicSyntaxParser(Symbol(symbol))
-    }
+  given Conversion[Predef.String, Parser[Leaf]] with
+    def apply(symbol: Predef.String): Parser[Leaf] = BasicLeafParser(Symbol(symbol))
+
+  given Conversion[Syntax, Parser[Leaf]] with
+    def apply(syntax: Syntax): Parser[Leaf] = BasicLeafParser(syntax)
 
 }
 
