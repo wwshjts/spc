@@ -93,7 +93,8 @@ sealed trait Binary(left: ParsingTree, right: ParsingTree) extends Branch {
 }
 
 case class ADD(left: ParsingTree, right: ParsingTree) extends Binary(left, right)
-case class SUBTRACT(leaf: ParsingTree, right: ParsingTree) extends  Binary(leaf, right)
+case class SUBTRACT(left: ParsingTree, right: ParsingTree) extends  Binary(left, right)
+case class MULTIPLY(left: ParsingTree, right: ParsingTree) extends  Binary(left, right)
 
 // ============================= Syntax ==========================
 sealed trait Syntax {

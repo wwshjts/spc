@@ -2,19 +2,23 @@ package org.syspro.spc
 package parser.grammar
 
 import scala.Conversion
-import org.syspro.spc.parser.grammar.Result.{Failure, Success}
 import org.syspro.spc.parser.parsing_tree.*
 import org.syspro.spc.parser.token.SyntaxKindConverter
 import syspro.tm.lexer.{BadToken, Token}
 import syspro.tm.parser.SyntaxKind
 
 import scala.annotation.tailrec
+sealed trait Result[+A]
+case class Success[+A](result: A, remain_input: List[Token]) extends Result[A]
+case class Failure(msg: Predef.String) extends Result[Nothing]
 
+/*
 enum Result[+A] {
   case Success(result: A, remain_input: List[Token])
   case Failure(msg: Predef.String)
   // TODO for better ERROR handling maybe I should add Fatal here
 }
+ */
 
 /**
  * A parser for things
@@ -27,11 +31,11 @@ enum Result[+A] {
  *
  * Very simple combinator lib, literally dsl for recursive descending parsing
  *
- * Doesn't support packard parser, or other methods of eliminating left recursion,
- * so you need to eliminate left recursion
+ * Doesn't support packard parsing, or other methods of eliminating left recursion,
+ * so you need to eliminate left recursion in your grammar to use this lib
  * @tparam A Return type of parser
  */
-trait Parser[+A] extends (List[Token] => Result[A]) {
+trait Parser[+A] extends (List[Token] => Result[A]) with Combinators {
 
   def apply(input: List[Token]): Result[A]
 
@@ -119,8 +123,8 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
       val res_a = a(input)
 
       res_a match
-        case Result.Success(_, _) => res_a
-        case Result.Failure(msg) => b(input)
+        case Success(_, _) => res_a
+        case Failure(msg) => b(input)
     }
   }
 
@@ -131,10 +135,18 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
       val res = parser(input)
 
       res match
-        case Result.Success(result, remain_input) => Result.Success(f(result), remain_input)
-        case Result.Failure(msg) => Failure(msg)
+        case Success(result, remain_input) => Success(f(result), remain_input)
+        case Failure(msg) => Failure(msg)
     }
   }
+
+  /*
+  problem I had parser of lists of pairs
+  I need list of parsers of pairs
+  Parser
+  def ^^^[A](): Parser[List[A]] => List[Parser[A]]
+   */
+
 
   /**
    * Map parser combinator
@@ -148,22 +160,28 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
   // apply this parser to input while parser succeeds and input has tokens
   // А вот че за параметр A должен возвращать do Комбинатор???
 
-  /**
-   *
-   * @return
-   */
-  def many(): Parser[List[A]] = {
-    val p: Parser[A] = this // just for code beauty
-
-    (input: List[Token]) => {
-      val res = p(input)
-      res match
-        case Result.Success(result, remain_input) => ???
-        case Result.Failure(msg) => Failure(msg)
-    }
-  }
 
   // TODO: make nice error handling can I?
+}
+
+trait Combinators {
+  /**
+   * Repeat this parser until it succeeds, or until input is not empty
+   * @return
+   */
+  def repeat[A](p: => Parser[A]): Parser[List[A]] = {
+    def repeatOnce(p: => Parser[A]): Parser[(A, A)] = p ~ p
+
+    ???
+  }
+}
+
+object Parser {
+  def consume[A](input: List[Token])(consumer: Token => Result[A]): Result[A] = {
+    input match
+      case token :: tail => consumer(token)
+      case _ => Failure("Eof")
+  }
 }
 
 
@@ -176,12 +194,25 @@ object BasicLeafParser {
   def apply(toMatch: Syntax): Parser[Leaf] = {
 
     (input: List[Token]) => {
-      val tkn = input.head
-      val syntax: Syntax = SyntaxKindConverter(tkn)
+      Parser.consume(input) { (token: Token) =>
+        val syntax: Syntax = SyntaxKindConverter(token)
 
-      if (toMatch == syntax) Success(toMatch.of(tkn), input.tail) else Failure(s"Can't parse Token $tkn, expected syntax kind $toMatch, found $syntax")
+        if (toMatch == syntax) Success(toMatch.of(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax")
+      }
+
+
+
+      /*
+      input match
+        case token :: tail =>
+          val syntax: Syntax = SyntaxKindConverter(token)
+
+          if (toMatch == syntax) Success(toMatch.of(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax")
+
+        case _ => Failure("Input is empty")
+
+       */
     }
-
   }
 
   given Conversion[Predef.String, Parser[Leaf]] with

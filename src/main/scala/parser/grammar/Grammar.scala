@@ -15,7 +15,7 @@ object Grammar {
   def integer: Parser[IntegerLiteral]   = INTEGER ^^ (i => IntegerLiteral(i))
   def string: Parser[StringLiteral]     = STRING ^^ (s => StringLiteral(s))
 
-  def literal_expr: Parser[Unary] = integer <|> string
+  def literal_expr: Parser[Unary]       = integer <|> string
 
   // **** Priority 1 ****
   // Unary expression
@@ -27,4 +27,6 @@ object Grammar {
 
   // Binary expressions
   // **** Priority 2 ****
+
+  // def factor: Parser[Binary] = unary ~ ( ("*" <|> "/") ~ unary ).|*() ^^ ()
 }
