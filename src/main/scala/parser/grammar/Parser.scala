@@ -2,12 +2,13 @@ package org.syspro.spc
 package parser.grammar
 
 import scala.Conversion
-
 import org.syspro.spc.parser.grammar.Result.{Failure, Success}
-import org.syspro.spc.parser.parsing_tree.{BinaryExpression, BuiltInType, INTEGER, Leaf, MINUS, PLUS, ParsingTree, STRING, Symbol, Syntax}
+import org.syspro.spc.parser.parsing_tree.*
 import org.syspro.spc.parser.token.SyntaxKindConverter
 import syspro.tm.lexer.{BadToken, Token}
 import syspro.tm.parser.SyntaxKind
+
+import scala.annotation.tailrec
 
 enum Result[+A] {
   case Success(result: A, remain_input: List[Token])
@@ -24,9 +25,10 @@ enum Result[+A] {
  *
  * of things and syspro.tm.lexer.Token
  *
- * Very simple combinator lib
+ * Very simple combinator lib, literally dsl for recursive descending parsing
  *
- * Doesn't support packard parser, so you need to eliminate left recursion in grammar
+ * Doesn't support packard parser, or other methods of eliminating left recursion,
+ * so you need to eliminate left recursion
  * @tparam A Return type of parser
  */
 trait Parser[+A] extends (List[Token] => Result[A]) {
@@ -75,7 +77,27 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
 
           res_b match {
             case Failure(msg) => Failure(msg)
-            case Success(ir_b, remain_input_b) => Success((ir_b), remain_input_b)
+            case Success(ir_b, remain_input_b) => Success(ir_b, remain_input_b)
+          }
+        }
+      }
+    }
+  }
+
+  def <~[U](b: Parser[U]): Parser[A] = {
+    val a: Parser[A] = this // just for beauty of code
+
+    (input: List[Token]) => {
+      val res_a = a(input)
+
+      res_a match {
+        case Failure(msg) => Failure(msg)
+        case Success(ir_a, remain_input_a) => {
+          val res_b = b(remain_input_a)
+
+          res_b match {
+            case Failure(msg) => Failure(msg)
+            case Success(ir_b, remain_input_b) => Success(ir_a, remain_input_b)
           }
         }
       }
@@ -123,7 +145,22 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
 
   // TODO: add do notation here
   // apply this parser to input while parser succeeds and input has tokens
-  def |*(): Parser[A] = ???
+  // А вот че за параметр A должен возвращать do Комбинатор???
+
+  /**
+   *
+   * @return
+   */
+  def |*(): Parser[Seq[A]] = {
+    val p: Parser[A] = this // just for code beauty
+
+    (input: List[Token]) => {
+      val res = p(input)
+      res match
+        case Result.Success(result, remain_input) => ???
+        case Result.Failure(msg) => Failure(msg)
+    }
+  }
 
   // TODO: make nice error handling can I?
 }
@@ -131,24 +168,27 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
 
 // TODO: add doc
 object BasicSyntaxParser {
-  def apply(toMatch: Syntax): Parser[Leaf] = {
+  def apply[A <: Syntax, B <: Leaf](toMatch: A): Parser[B] = {
+
     (input: List[Token]) => {
       val tkn = input.head
       val syntax: Syntax = SyntaxKindConverter(tkn)
 
-      if (toMatch == syntax) Success(toMatch.of(tkn), input.tail) else Failure(s"Can't parse Token $tkn, expected syntax kind $toMatch, found $syntax")
+      if (toMatch == syntax) Success(toMatch.of(tkn).asInstanceOf[B], input.tail) else Failure(s"Can't parse Token $tkn, expected syntax kind $toMatch, found $syntax")
     }
+
   }
 
-  given Conversion[Predef.String, Parser[Leaf]] with
-    def apply(string: Predef.String): Parser[Leaf] = {
-      // TODO: Handle match exception
-      BasicSyntaxParser(Symbol(string))
+  given Conversion[Predef.String, Parser[Symbol]] with
+    def apply(symbol: Predef.String): Parser[Symbol] = {
+      BasicSyntaxParser(Symbol(symbol))
     }
+
 }
 
+
 // something like this, or add conversion from lists
-val primary: Parser[Leaf] = BasicSyntaxParser(INTEGER) <|> BasicSyntaxParser(STRING)
+//import BasicSyntaxParser.given_Conversion_String_Parser
 
 /*
 primitive_expr = INTEGER_EXPR | ... | RUNE_EXPR
@@ -156,6 +196,9 @@ primitive_expr = INTEGER_EXPR | ... | RUNE_EXPR
 ADD_EXPR = (EXPR PLUS) EXPR : Parser[ADD_EXPR]
             Parser[(EXPR, PLUS)]
               Parser[((EXPR, PLUS), EXPR)] :>> Parser[ADD_EXPR]
+
+plus = "+"
+lots_plus = |* plus => ((( .. (Plus, Plus)) ... )
 
 val unary: Parser[Unary] = ( ("!" <|> "-") ~ unary ) <|> primary
 

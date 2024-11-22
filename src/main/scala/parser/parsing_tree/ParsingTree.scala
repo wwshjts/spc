@@ -27,13 +27,14 @@ sealed trait ParsingTree extends SyntaxNode {
   def rank(): Int
 }
 
-sealed trait Branch extends ParsingTree {}
+sealed trait Branch extends ParsingTree
 
 sealed trait Leaf(tkn: Token) extends ParsingTree {
   override def apply(index: Int): Option[ParsingTree] = None
   override def rank(): Int = 0
   override def token(): Token = tkn
 }
+
 
 case class BAD(tkn: Token)          extends Leaf(tkn)
 
@@ -59,9 +60,28 @@ case class ASTERISK(tkn: Token)     extends Leaf(tkn)
 case class SLASH(tkn: Token)        extends Leaf(tkn)
 // TODO: add other symbols to IR
 
+/**
+ * Trait which specify branch with only one descendant
+ */
+sealed trait Unary(op: ParsingTree) extends Branch {
+  override def apply(index: Int): Option[ParsingTree] = if (index == 0) Some(op) else None
 
-sealed trait Expression extends Branch {}
-sealed trait BinaryExpression(left: Expression, right: Expression) extends Expression {
+  override def rank(): Int = 1
+}
+
+case class Negate(op: ParsingTree)        extends Unary(op)
+case class UPlus(op: ParsingTree)         extends Unary(op)
+case class BitwiseNot(op: ParsingTree)    extends Unary(op)
+
+case class StringLiteral(op: STRING)      extends Unary(op)
+case class IntegerLiteral(op: INTEGER)    extends Unary(op)
+case class RuneLiteral(op: RUNE)          extends Unary(op)
+case class BooleanLiteral(op: BOOLEAN)    extends Unary(op)
+
+case class GroupBy(op: ParsingTree)       extends Unary(op)
+
+
+sealed trait Binary(left: ParsingTree, right: ParsingTree) extends Branch {
   override def apply(index: Int): Option[ParsingTree] = index match {
     case 0 => Some(left)
     case 1 => Some(right)
@@ -71,11 +91,10 @@ sealed trait BinaryExpression(left: Expression, right: Expression) extends Expre
   override def rank(): Int = 2
 }
 
-case class ADD(left: Expression, right: Expression) extends BinaryExpression(left, right)
-case class SUBTRACT(leaf: Expression, right: Expression) extends  BinaryExpression(leaf, right)
+case class ADD(left: ParsingTree, right: ParsingTree) extends Binary(left, right)
+case class SUBTRACT(leaf: ParsingTree, right: ParsingTree) extends  Binary(leaf, right)
 
-
-// Syntax
+// ============================= Syntax ==========================
 sealed trait Syntax {
   // TODO: def kind(): AnySyntaxKind
 
@@ -104,6 +123,7 @@ sealed trait Syntax {
 
   }
 }
+
 case object INDENT        extends Syntax
 case object DEDENT        extends Syntax
 
@@ -122,63 +142,21 @@ case object ASTERISK      extends Symbol
 case object SLASH         extends Symbol
 // TODO: add all Symbols
 
+// TODO: Do i really need hierachy for built-in's???
 sealed trait BuiltInType  extends Syntax
 case object INTEGER       extends BuiltInType
 case object BOOLEAN       extends BuiltInType
 case object STRING        extends BuiltInType
 
-
-/*
 object Symbol {
-  /**
-   * Construct Symbol Leaf of ParsingTree IR
-   * @param token token from Leaf constructed
-   * @return case object for corresponding symbol
-   */
-  val of: PartialFunction[Token, Symbol] = (token: Token) => token match
-    case _ if token.toSyntaxKind.isInstanceOf[syspro.tm.lexer.Symbol] => {
-      val symbol = token.toSyntaxKind.asInstanceOf[syspro.tm.lexer.Symbol]
-      symbol match {
-        case syspro.tm.lexer.Symbol.DOT => DOT
-        case syspro.tm.lexer.Symbol.COLON => COLON
-        case syspro.tm.lexer.Symbol.COMMA => COMMA
-        case syspro.tm.lexer.Symbol.PLUS => PLUS
-        case syspro.tm.lexer.Symbol.MINUS => MINUS
-        case syspro.tm.lexer.Symbol.ASTERISK => ASTERISK
-        case syspro.tm.lexer.Symbol.SLASH => SLASH
-        case syspro.tm.lexer.Symbol.PERCENT => ???
-        case syspro.tm.lexer.Symbol.EXCLAMATION => ???
-        case syspro.tm.lexer.Symbol.TILDE => ???
-        case syspro.tm.lexer.Symbol.AMPERSAND => ???
-        case syspro.tm.lexer.Symbol.BAR => ???
-        case syspro.tm.lexer.Symbol.AMPERSAND_AMPERSAND => ???
-        case syspro.tm.lexer.Symbol.BAR_BAR => ???
-        case syspro.tm.lexer.Symbol.CARET => ???
-        case syspro.tm.lexer.Symbol.LESS_THAN => ???
-        case syspro.tm.lexer.Symbol.LESS_THAN_EQUALS => ???
-        case syspro.tm.lexer.Symbol.GREATER_THAN => ???
-        case syspro.tm.lexer.Symbol.GREATER_THAN_EQUALS => ???
-        case syspro.tm.lexer.Symbol.LESS_THAN_LESS_THAN => ???
-        case syspro.tm.lexer.Symbol.GREATER_THAN_GREATER_THAN => ???
-        case syspro.tm.lexer.Symbol.OPEN_BRACKET => ???
-        case syspro.tm.lexer.Symbol.CLOSE_BRACKET => ???
-        case syspro.tm.lexer.Symbol.OPEN_PAREN => ???
-        case syspro.tm.lexer.Symbol.CLOSE_PAREN => ???
-        case syspro.tm.lexer.Symbol.EQUALS => ???
-        case syspro.tm.lexer.Symbol.EQUALS_EQUALS => ???
-        case syspro.tm.lexer.Symbol.EXCLAMATION_EQUALS => ???
-        case syspro.tm.lexer.Symbol.QUESTION => ???
-        case syspro.tm.lexer.Symbol.BOUND => ???
-      }
-    }
-
-  def of(symbol: Symbol, token: Token): Symbol = symbol match
-    case DOT => DOT(token)
-    case COLON => COLON(token)
-    case COMMA => COMMA(token)
-    case PLUS => PLUS(token)
-    case MINUS => MINUS(token)
-    case ASTERISK => ASTERISK(token)
-    case SLASH => SLASH(token)
+  def apply(symbol: Predef.String): Symbol = {
+    symbol match
+      case "." => DOT
+      case ":" => COLON
+      case "," => COMMA
+      case "+" => PLUS
+      case "-" => MINUS
+      case "*" => ASTERISK
+      case "/" => SLASH
+  }
 }
- */
