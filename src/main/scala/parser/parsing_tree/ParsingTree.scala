@@ -35,6 +35,7 @@ sealed trait Leaf(tkn: Token) extends ParsingTree {
   override def token(): Token = tkn
 }
 
+sealed trait Operation(operator: Leaf)
 
 case class BAD(tkn: Token)          extends Leaf(tkn)
 
@@ -70,9 +71,9 @@ sealed trait Unary(op: ParsingTree) extends Branch {
   override def rank(): Int = 1
 }
 
-case class Negate(op: ParsingTree)        extends Unary(op)
-case class UPlus(op: ParsingTree)         extends Unary(op)
-case class BitwiseNot(op: ParsingTree)    extends Unary(op)
+case class Negate(op: ParsingTree)                         extends Unary(op)
+case class UPlus(op: ParsingTree)                          extends Unary(op)
+case class BitwiseNot(op: ParsingTree)                     extends Unary(op)
 
 case class StringLiteral(op: Leaf)        extends Unary(op)
 case class IntegerLiteral(op: Leaf)       extends Unary(op)
@@ -95,6 +96,7 @@ sealed trait Binary(left: ParsingTree, right: ParsingTree) extends Branch {
 case class ADD(left: ParsingTree, right: ParsingTree) extends Binary(left, right)
 case class SUBTRACT(left: ParsingTree, right: ParsingTree) extends  Binary(left, right)
 case class MULTIPLY(left: ParsingTree, right: ParsingTree) extends  Binary(left, right)
+case class DIV(left: ParsingTree, right: ParsingTree) extends Binary(left, right)
 
 // ============================= Syntax ==========================
 sealed trait Syntax {

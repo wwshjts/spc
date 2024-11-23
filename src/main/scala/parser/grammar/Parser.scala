@@ -1,16 +1,27 @@
 package org.syspro.spc
 package parser.grammar
 
+import org.syspro.spc.parser.grammar.Parser.consume
+
 import scala.Conversion
 import org.syspro.spc.parser.parsing_tree.*
 import org.syspro.spc.parser.token.SyntaxKindConverter
 import syspro.tm.lexer.{BadToken, Token}
 import syspro.tm.parser.SyntaxKind
 
+import javax.xml.transform.Result
 import scala.annotation.tailrec
-sealed trait Result[+A]
-case class Success[+A](result: A, remain_input: List[Token]) extends Result[A]
-case class Failure(msg: Predef.String) extends Result[Nothing]
+import scala.collection.mutable.ListBuffer
+
+sealed trait Result[+A] {
+  def map[U](f: A => U): Result[U]
+}
+case class Success[+A](result: A, remain_input: List[Token]) extends Result[A] {
+  override def map[U](f: A => U): Result[U] = Success(f(result), remain_input)
+}
+case class Failure(msg: Predef.String) extends Result[Nothing] {
+  override def map[U](f: Nothing => U): Result[U] = Failure(msg)
+}
 
 /*
 enum Result[+A] {
@@ -35,7 +46,7 @@ enum Result[+A] {
  * so you need to eliminate left recursion in your grammar to use this lib
  * @tparam A Return type of parser
  */
-trait Parser[+A] extends (List[Token] => Result[A]) with Combinators {
+trait Parser[+A] extends (List[Token] => Result[A]) {
 
   def apply(input: List[Token]): Result[A]
 
@@ -56,9 +67,7 @@ trait Parser[+A] extends (List[Token] => Result[A]) with Combinators {
       res_a match {
         case Failure(msg) => Failure(msg)
         case Success(ir_a, remain_input_a) => {
-          println(b)
           val res_b = b(remain_input_a)
-          println(remain_input_a)
           res_b match {
             case Failure(msg) => Failure(msg)
             case Success(ir_b, remain_input_b) => Success((ir_a, ir_b), remain_input_b)
@@ -139,6 +148,11 @@ trait Parser[+A] extends (List[Token] => Result[A]) with Combinators {
         case Failure(msg) => Failure(msg)
     }
   }
+  
+  def flatMap[U](f: A => Parser[U]): Parser[U] = {
+    ???
+  }
+  
 
   /*
   problem I had parser of lists of pairs
@@ -164,15 +178,35 @@ trait Parser[+A] extends (List[Token] => Result[A]) with Combinators {
   // TODO: make nice error handling can I?
 }
 
-trait Combinators {
-  /**
-   * Repeat this parser until it succeeds, or until input is not empty
-   * @return
-   */
-  def repeat[A](p: => Parser[A]): Parser[List[A]] = {
-    def repeatOnce(p: => Parser[A]): Parser[(A, A)] = p ~ p
+object Combinators {
 
-    ???
+  def repeatAtLeastOnce[A](p: => Parser[A]): Parser[List[A]] = repeatAtLeastOnce(p, p)
+
+  def repeatAtLeastOnce[A](first: => Parser[A], p0: => Parser[A]): Parser[List[A]] = { (in: List[Token]) =>
+    lazy val p = p0
+    val elems = new ListBuffer[A]
+
+    def continue(in: List[Token]): Result[List[A]] = {
+      val p0 = p
+      @tailrec def applyp(in0: List[Token]): Result[List[A]] =
+        if (in0.isEmpty) return Success(elems.toList, in0)
+        p0(in0) match {
+        case Success(result, remain_input) =>
+          elems += result
+          applyp(remain_input)
+
+        case f@Failure(msg) => f
+      }
+
+      applyp(in)
+    }
+
+    first(in) match {
+      case Success(result, remain_input) =>
+        elems += result
+        continue(remain_input)
+      case f @ Failure(msg) => f
+    }
   }
 }
 
@@ -199,19 +233,6 @@ object BasicLeafParser {
 
         if (toMatch == syntax) Success(toMatch.of(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax")
       }
-
-
-
-      /*
-      input match
-        case token :: tail =>
-          val syntax: Syntax = SyntaxKindConverter(token)
-
-          if (toMatch == syntax) Success(toMatch.of(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax")
-
-        case _ => Failure("Input is empty")
-
-       */
     }
   }
 
@@ -222,21 +243,3 @@ object BasicLeafParser {
     def apply(syntax: Syntax): Parser[Leaf] = BasicLeafParser(syntax)
 
 }
-
-
-// something like this, or add conversion from lists
-//import BasicSyntaxParser.given_Conversion_String_Parser
-
-/*
-primitive_expr = INTEGER_EXPR | ... | RUNE_EXPR
-
-ADD_EXPR = (EXPR PLUS) EXPR : Parser[ADD_EXPR]
-            Parser[(EXPR, PLUS)]
-              Parser[((EXPR, PLUS), EXPR)] :>> Parser[ADD_EXPR]
-
-plus = "+"
-lots_plus = |* plus => ((( .. (Plus, Plus)) ... )
-
-val unary: Parser[Unary] = ( ("!" <|> "-") ~ unary ) <|> primary
-
- */

@@ -28,5 +28,28 @@ object Grammar {
   // Binary expressions
   // **** Priority 2 ****
 
-  // def factor: Parser[Binary] = unary ~ ( ("*" <|> "/") ~ unary ).|*() ^^ ()
+  // def term: Parser[Binary] = (unary ~ ("*" <|> "/")) <|> unary <|> term
+  def factor = (unary ~ Combinators.repeatAtLeastOnce(("*" <|> "/") ~ unary)) ^^ (
+    parsed => {
+      val u = parsed._1
+      val list = parsed._2
+      println(list)
+
+      list match
+        case head :: tail => {
+          val first = head._1 match {
+            case ASTERISK(_) => MULTIPLY(u, head._2)
+            case SLASH(_) => DIV(u, head._2)
+          }
+
+          tail.foldLeft(first)((left, op) => {
+            op._1 match
+              case ASTERISK(_) => MULTIPLY(left, op._2)
+              case SLASH(_) => DIV(left, op._2)
+
+          })
+        }
+    }
+    )
+
 }
