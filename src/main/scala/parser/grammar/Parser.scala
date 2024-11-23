@@ -1,15 +1,11 @@
 package org.syspro.spc
 package parser.grammar
 
-import org.syspro.spc.parser.grammar.Parser.consume
-
 import scala.Conversion
 import org.syspro.spc.parser.parsing_tree.*
 import org.syspro.spc.parser.token.SyntaxKindConverter
-import syspro.tm.lexer.{BadToken, Token}
-import syspro.tm.parser.SyntaxKind
+import syspro.tm.lexer.Token
 
-import javax.xml.transform.Result
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 
