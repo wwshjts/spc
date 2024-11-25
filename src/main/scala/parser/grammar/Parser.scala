@@ -221,7 +221,7 @@ object BasicLeafParser {
    * @param toMatch syntax of consumed token
    * @return parser, that consumes one input terminal token, return Leaf node for this token
    */
-  def apply(toMatch: Syntax): Parser[Leaf] = {
+  def apply(toMatch: Syntax): Parser[Terminal] = {
 
     (input: List[Token]) => {
       Parser.consume(input) { (token: Token) =>
@@ -232,10 +232,10 @@ object BasicLeafParser {
     }
   }
 
-  given Conversion[Predef.String, Parser[Leaf]] with
-    def apply(symbol: Predef.String): Parser[Leaf] = BasicLeafParser(Symbol(symbol))
+  given Conversion[Predef.String, Parser[Terminal]] with
+    def apply(symbol: Predef.String): Parser[Terminal] = BasicLeafParser(Symbol(symbol))
 
-  given Conversion[Syntax, Parser[Leaf]] with
-    def apply(syntax: Syntax): Parser[Leaf] = BasicLeafParser(syntax)
+  given Conversion[Syntax, Parser[Terminal]] with
+    def apply(syntax: Syntax): Parser[Terminal] = BasicLeafParser(syntax)
 
 }
