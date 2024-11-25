@@ -5,72 +5,78 @@ import syspro.tm.lexer.Token
 import syspro.tm.parser.{AnySyntaxKind, SyntaxKind, SyntaxNode}
 
 
+/*
+  IR of compiler split into two different trait families
+  This partitioning allows for a flexible internal representation
+  @see Tree
+  @see Grammar
+*/
+
+// ------------------ Tree ------------------
+sealed trait Tree {
+  def apply(index: Int): Option[Tree]
+  def rank(): Int
+}
+
+sealed trait Branch extends Tree
+
+
+sealed trait Leaf extends Tree {
+  override def apply(index: Int): Option[Tree] = None
+
+  override def rank(): Int = 0
+}
+
+sealed trait Grammar {
+  override def kind(): SyntaxKind = ???
+  override def token(): Token = null
+}
+
+sealed trait Terminal(tkn: Token) extends Grammar {
+  override def token(): Token = tkn
+}
+
 /**
  * Represents IR of spc compiler parser
  * Every IR atom should extend ParsingTree
  */
-sealed trait ParsingTree extends SyntaxNode {
-  // every Parsing tree part should satisfy SyntaxNode contract
-  override def kind(): SyntaxKind = ???
-  override def slotCount(): Int = rank()
-  override def slot(index: Int): SyntaxNode = apply(index).get
-  override def token(): Token = null
+sealed trait ParsingTree extends SyntaxNode with Tree with Grammar {}
 
-  /**
-   * Returns tree descendant by its index
-   */
-  def apply(index: Int): Option[ParsingTree]
-
-  /**
-   * Amount of direct descendants of tree
-   */
-  def rank(): Int
-}
-
-sealed trait Branch extends ParsingTree
-
-sealed trait Leaf(tkn: Token) extends ParsingTree {
-  override def apply(index: Int): Option[ParsingTree] = None
-  override def rank(): Int = 0
-  override def token(): Token = tkn
-}
-
-sealed trait Operation(operator: Leaf)
-
-case class BAD(tkn: Token)          extends Leaf(tkn)
+case class BAD(tkn: Token)          extends Leaf with Terminal(tkn) with Syntax
 
 // Indentation and other syntax
-case class INDENT(tkn: Token)       extends Leaf(tkn)
-case class DEDENT(tkn: Token)       extends Leaf(tkn)
+case class INDENT(tkn: Token)       extends Leaf with Terminal(tkn) with Syntax
+case class DEDENT(tkn: Token)       extends Leaf with Terminal(tkn) with Syntax
 
-case class IDENTIFIER(tkn: Token)   extends Leaf(tkn)
-case class RUNE(tkn: Token)         extends Leaf(tkn)
+case class IDENTIFIER(tkn: Token)   extends Leaf with Terminal(tkn) with Syntax
+case class RUNE(tkn: Token)         extends Leaf with Terminal(tkn) with Syntax
 
 // Built-in types
-case class BOOLEAN(tkn: Token)      extends Leaf(tkn)
-case class INTEGER(tkn: Token)      extends Leaf(tkn)
-case class STRING(tkn: Token)       extends Leaf(tkn)
+case class BOOLEAN(tkn: Token)      extends Leaf with Terminal(tkn) with Syntax
+case class INTEGER(tkn: Token)      extends Leaf with Terminal(tkn) with Syntax
+case class STRING(tkn: Token)       extends Leaf with Terminal(tkn) with Syntax
 
 // Symbols
-case class DOT(tkn: Token)          extends Leaf(tkn)
-case class COLON(tkn: Token)        extends Leaf(tkn)
-case class COMMA(tkn: Token)        extends Leaf(tkn)
-case class PLUS(tkn: Token)         extends Leaf(tkn)
-case class MINUS(tkn: Token)        extends Leaf(tkn)
-case class ASTERISK(tkn: Token)     extends Leaf(tkn)
-case class SLASH(tkn: Token)        extends Leaf(tkn)
-case class TILDE(tkn: Token)        extends Leaf(tkn)
+case class DOT(tkn: Token)          extends Leaf with Terminal(tkn) with Syntax
+case class COLON(tkn: Token)        extends Leaf with Terminal(tkn) with Syntax
+case class COMMA(tkn: Token)        extends Leaf with Terminal(tkn) with Syntax
+case class PLUS(tkn: Token)         extends Leaf with Terminal(tkn) with Syntax
+case class MINUS(tkn: Token)        extends Leaf with Terminal(tkn) with Syntax
+case class ASTERISK(tkn: Token)     extends Leaf with Terminal(tkn) with Syntax
+case class SLASH(tkn: Token)        extends Leaf with Terminal(tkn) with Syntax
+case class TILDE(tkn: Token)        extends Leaf with Terminal(tkn) with Syntax
 // TODO: add other symbols to IR
 
 /**
  * Trait which specify branch with only one descendant
  */
-sealed trait Unary(op: ParsingTree) extends Branch {
+sealed trait UnaryExpr(op: ParsingTree) extends Branch {
   override def apply(index: Int): Option[ParsingTree] = if (index == 0) Some(op) else None
 
   override def rank(): Int = 1
 }
 
+/*
 case class Negate(op: ParsingTree)                         extends Unary(op)
 case class UPlus(op: ParsingTree)                          extends Unary(op)
 case class BitwiseNot(op: ParsingTree)                     extends Unary(op)
@@ -98,7 +104,13 @@ case class SUBTRACT(left: ParsingTree, right: ParsingTree) extends  Binary(left,
 case class MULTIPLY(left: ParsingTree, right: ParsingTree) extends  Binary(left, right)
 case class DIV(left: ParsingTree, right: ParsingTree) extends Binary(left, right)
 
+
+ */
+
+
 // ============================= Syntax ==========================
+
+/** needed for DSL */
 sealed trait Syntax {
   // TODO: def kind(): AnySyntaxKind
 
