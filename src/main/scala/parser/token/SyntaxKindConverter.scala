@@ -1,21 +1,21 @@
 package org.syspro.spc
 package parser.token
 
-import org.syspro.spc.parser.parsing_tree.{BAD, Terminal, ParsingTree, Symbol, Syntax}
-import org.syspro.spc.parser.parsing_tree
+import org.syspro.spc.parser.parsing_tree.{BAD, ParsingTree, Symbol, Syntax, Terminal}
+import org.syspro.spc.parser.{DSLEntity, parsing_tree}
 import syspro.tm.lexer
 import syspro.tm.lexer.{Keyword, Token}
 import syspro.tm.parser.SyntaxKind
 
 object SyntaxKindConverter {
-  def apply(token: Token): Syntax = {
+  def apply(token: Token): DSLEntity = {
     token.toSyntaxKind match
       case kw: Keyword => keyword(kw)
       case sym: lexer.Symbol => symbol(sym)
       case knd: SyntaxKind => kind(knd)
   }
 
-  def keyword(kw: Keyword): Syntax = {
+  def keyword(kw: Keyword): DSLEntity = {
     kw match
       case Keyword.THIS => ???
       case Keyword.SUPER => ???
