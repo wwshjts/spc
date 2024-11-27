@@ -1,8 +1,8 @@
 package org.syspro.spc
 package parser.token
 
-import org.syspro.spc.parser.parsing_tree.{BAD, ParsingTree, Symbol, Syntax, Terminal}
-import org.syspro.spc.parser.{DSLEntity, parsing_tree}
+import org.syspro.spc.parser.parsing_tree.{BAD, ParsingTree, Symbol, DSLEntity, Terminal}
+import org.syspro.spc.parser.parsing_tree
 import syspro.tm.lexer
 import syspro.tm.lexer.{Keyword, Token}
 import syspro.tm.parser.SyntaxKind
@@ -41,7 +41,7 @@ object SyntaxKindConverter {
       case Keyword.NULL => ???
   }
 
-  def kind(k: SyntaxKind): Syntax = {
+  def kind(k: SyntaxKind): DSLEntity = {
     k match
       case SyntaxKind.BAD => parsing_tree.BAD
       case SyntaxKind.INDENT => parsing_tree.INDENT

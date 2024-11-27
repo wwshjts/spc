@@ -8,22 +8,25 @@ import parser.parsing_tree.*
  */
 object Grammar {
 
-  import BasicLeafParser.{given_Conversion_String_Parser, given_Conversion_Syntax_Parser}
+  import BasicLeafParser.{given_Conversion_String_Parser, given_Conversion_DSLEntity_Parser}
+
 
   // **** Priority 0 ****
   // primary expression
   def integer: Parser[IntegerLiteral]   = INTEGER ^^ (i => IntegerLiteral(i))
   def string: Parser[StringLiteral]     = STRING ^^ (s => StringLiteral(s))
+  def bool: Parser[BooleanLiteral]      = BOOLEAN ^^ (b => BooleanLiteral(b))
+  def rune: Parser[RuneLiteral]         = RUNE ^^ (r => RuneLiteral(r))
 
-  def literal_expr: Parser[Unary]       = integer <|> string
+  def literal_expr: Parser[LiteralExpr] = integer <|> string <|> bool <|> rune
 
   // **** Priority 1 ****
   // Unary expression
-  def unary: Parser[Unary] = (negate <|> u_plus <|> bitwiseNot) <|> literal_expr
+  def unary: Parser[Expression] = (negate <|> u_plus <|> bitwiseNot) <|> literal_expr
 
-  def negate: Parser[Negate]            = ("-" ~ unary) ^^ (p => Negate(p._2))
-  def u_plus: Parser[UPlus]             = ("+" ~ unary) ^^ (p => UPlus(p._2))
-  def bitwiseNot: Parser[BitwiseNot]    = ("~" ~ unary) ^^ (p => BitwiseNot(p._2))
+  def negate: Parser[Negate]            = ("-" ~ unary) ^^ (p => Negate(p._1, p._2))
+  def u_plus: Parser[UPlus]             = ("+" ~ unary) ^^ (p => UPlus(p._1, p._2))
+  def bitwiseNot: Parser[BitwiseNot]    = ("~" ~ unary) ^^ (p => BitwiseNot(p._1, p._2))
 
   // Binary expressions
   // **** Priority 2 ****
@@ -38,18 +41,17 @@ object Grammar {
       list match
         case head :: tail => {
           val first = head._1 match {
-            case ASTERISK(_) => MULTIPLY(u, head._2)
-            case SLASH(_) => DIV(u, head._2)
+            case ASTERISK(_) => MULTIPLY(u, head._1, head._2)
+            case SLASH(_) => DIV(u, head._1, head._2)
           }
 
           tail.foldLeft(first)((left, op) => {
             op._1 match
-              case ASTERISK(_) => MULTIPLY(left, op._2)
-              case SLASH(_) => DIV(left, op._2)
+              case ASTERISK(_) => MULTIPLY(left, op._1, op._2)
+              case SLASH(_) => DIV(left, op._1, op._2)
 
           })
         }
     }
     )
-
 }

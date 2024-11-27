@@ -1,7 +1,6 @@
 package org.syspro.spc
 package parser.parsing_tree
 
-import org.syspro.spc.parser.DSLEntity
 import syspro.tm.lexer.Token
 import syspro.tm.parser.{AnySyntaxKind, SyntaxKind, SyntaxNode}
 
@@ -17,10 +16,13 @@ import syspro.tm.parser.{AnySyntaxKind, SyntaxKind, SyntaxNode}
  * @see Grammar
  */
 sealed trait ParsingTree extends SyntaxNode {
-  def kind(): SyntaxKind
-  def apply(index: Int): Option[Tree]
+  def apply(index: Int): Option[ParsingTree]
   def rank(): Int
   def token(): Token
+
+  override def kind(): SyntaxKind = ???
+  override def slotCount(): Int = rank()
+  override def slot(i: Int): SyntaxNode = apply(i).get
 }
 
 // ------------------ Tree ------------------
@@ -31,7 +33,7 @@ sealed trait Tree extends ParsingTree {
 
 sealed trait Branch extends Tree
 
-sealed trait Unary(branch: ParsingTree) extends Branch {
+sealed trait UnaryBranch(branch: ParsingTree) extends Branch {
   override def apply(index: Int): Option[ParsingTree] = index match
     case 0 => Some(branch)
     case _ => None
@@ -39,13 +41,23 @@ sealed trait Unary(branch: ParsingTree) extends Branch {
   override def rank() = 1
 }
 
-sealed trait Binary(left: ParsingTree, right: ParsingTree) extends Branch {
+sealed trait BinaryBranch(left: ParsingTree, right: ParsingTree) extends Branch {
   override def apply(index: Int): Option[ParsingTree] = index match
     case 0 => Some(left)
     case 1 => Some(right)
     case _ => None
 
   override def rank() = 2
+}
+
+sealed trait TernaryBranch(first: ParsingTree, second: ParsingTree, third: ParsingTree) extends Branch {
+  override def apply(index: Int): Option[ParsingTree] = index match
+    case 0 => Some(first)
+    case 1 => Some(second)
+    case 3 => Some(third)
+    case _ => None
+
+  override def rank(): Int = 3
 }
 
 sealed trait Leaf extends Tree {
@@ -57,7 +69,7 @@ sealed trait Leaf extends Tree {
 
 // ------------------ Grammar ------------------
 sealed trait Grammar extends ParsingTree {
-  def kind(): SyntaxKind = ???
+  override def kind(): SyntaxKind = ???
   def token(): Token = null
 }
 
@@ -69,14 +81,16 @@ sealed trait Terminal(tkn: Token) extends Grammar with DSLEntity {
   override def token(): Token = tkn
 }
 
-sealed trait Expression
+sealed trait Expression extends Grammar
 
-sealed trait Primary
+sealed trait Primary extends Expression
+
+sealed trait BinaryExpr extends Expression
 
 // ---------------------------------------------
 
 
-case class BAD(tkn: Token)          extends Leaf with Terminal(tkn) with Syntax
+case class BAD(tkn: Token)          extends Leaf with Terminal(tkn)
 
 // Indentation and other syntax
 case class INDENT(tkn: Token)       extends Leaf with Terminal(tkn)
@@ -101,46 +115,30 @@ case class SLASH(tkn: Token)        extends Leaf with Terminal(tkn)
 case class TILDE(tkn: Token)        extends Leaf with Terminal(tkn)
 // TODO: add other symbols to IR
 
-abstract class LiteralExpr(terminal: Terminal) extends Unary(terminal) with Primary
+abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Primary
 
 /**
  * Trait which specify branch with only one descendant
  */
-abstract class UnaryExpr(operation: Terminal, operand: ParsingTree) extends Binary(operation, operand) {}
+abstract class UnaryExpr(operation: Terminal, operand: ParsingTree) extends BinaryBranch(operation, operand) with Expression {}
 
-case class Negate(operation: MINUS, operand: ParsingTree)                         extends UnaryExpr(operation, operand)
-case class UPlus(operation: PLUS, operand: ParsingTree)                           extends UnaryExpr(operation, operand)
-case class BitwiseNot(operation: TILDE, operand: ParsingTree)                     extends UnaryExpr(operation, operand)
-
-
-case class StringLiteral(op: STRING)          extends LiteralExpr(op)
-case class IntegerLiteral(op: INTEGER)        extends LiteralExpr(op)
-case class RuneLiteral(op: RUNE)              extends LiteralExpr(op)
-case class BooleanLiteral(op: BOOLEAN)        extends LiteralExpr(op)
-
-/*
-case class GroupBy(op: ParsingTree)       extends Unary(op)
+case class Negate(operation: Terminal, operand: ParsingTree)       extends UnaryExpr(operation, operand)
+case class UPlus(operation: Terminal, operand: ParsingTree)        extends UnaryExpr(operation, operand)
+case class BitwiseNot(operation: Terminal, operand: ParsingTree)   extends UnaryExpr(operation, operand)
 
 
-sealed trait Binary(left: ParsingTree, right: ParsingTree) extends Branch {
-  override def apply(index: Int): Option[ParsingTree] = index match {
-    case 0 => Some(left)
-    case 1 => Some(right)
-    case _ => None
-  }
+case class StringLiteral(op: Terminal)          extends LiteralExpr(op)
+case class IntegerLiteral(op: Terminal)         extends LiteralExpr(op)
+case class RuneLiteral(op: Terminal)            extends LiteralExpr(op)
+case class BooleanLiteral(op: Terminal)         extends LiteralExpr(op)
 
-  override def rank(): Int = 2
-}
+//TODO: case class GroupBy(op: ParsingTree)       extends Unary(op)
 
-case class ADD(left: ParsingTree, right: ParsingTree) extends Binary(left, right)
-case class SUBTRACT(left: ParsingTree, right: ParsingTree) extends  Binary(left, right)
-case class MULTIPLY(left: ParsingTree, right: ParsingTree) extends  Binary(left, right)
-case class DIV(left: ParsingTree, right: ParsingTree) extends Binary(left, right)
-
-
- */
-
-
+abstract class BinaryExpression(left: ParsingTree, op: Terminal, right: ParsingTree) extends TernaryBranch(left, op, right) with Expression {}
+case class ADD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
+case class SUBTRACT(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
+case class MULTIPLY(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
+case class DIV(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 
 // ============================= Syntax ==========================
 
@@ -149,7 +147,6 @@ trait DSLEntity {
   // TODO: def kind(): AnySyntaxKind
 
   // TODO
-  /*
   def of(token: Token): Terminal = {
     this match {
       case INDENT => INDENT(token)
@@ -174,7 +171,6 @@ trait DSLEntity {
     }
 
   }
-   */
 }
 
 case object INDENT        extends DSLEntity
@@ -198,9 +194,7 @@ case object TILDE         extends Symbol
 
 // TODO: Do i really need hierachy for built-in's???
 sealed trait BuiltInType  extends DSLEntity
-case object INTEGER       extends BuiltInType {
-  override def apply(tkn: Token): INTEGER = INTEGER(tkn)
-}
+case object INTEGER       extends BuiltInType
 case object BOOLEAN       extends BuiltInType
 case object STRING        extends BuiltInType
 

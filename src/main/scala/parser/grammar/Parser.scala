@@ -1,7 +1,7 @@
 package org.syspro.spc
 package parser.grammar
 
-import org.syspro.spc.parser.DSLEntity
+import org.syspro.spc.parser.parsing_tree.DSLEntity
 
 import scala.Conversion
 import org.syspro.spc.parser.parsing_tree.*
@@ -219,40 +219,27 @@ object Parser {
 
 // TODO: add doc
 object BasicLeafParser {
-  /*
   /**
    * @param toMatch syntax of consumed token
    * @return parser, that consumes one input terminal token, return Leaf node for this token
    */
-  def apply(toMatch: DSLEntity): Parser[A] = {
+  def apply(toMatch: DSLEntity): Parser[Terminal] = {
 
     (input: List[Token]) => {
       Parser.consume(input) { (token: Token) =>
 
-        val
-        if (TokenConverter(token)) Success(toMatch.of(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax")
-      }
-    }
-  }
-   */
-  
-  def integer: Parser[INTEGER] = {
-    (input: List[Token]) => {
-      Parser.consume(input) { (token: Token) =>
-        
+        val syntax = SyntaxKindConverter(token)
+        if (syntax == toMatch) Success(toMatch.of(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax")
       }
     }
   }
 
 
-
-  /*
+  // Conversion from String, eah, type will be deduced to Terminal
   given Conversion[Predef.String, Parser[Terminal]] with
     def apply(symbol: Predef.String): Parser[Terminal] = BasicLeafParser(Symbol(symbol))
 
-  given Conversion[Syntax, Parser[Terminal]] with
-    def apply(syntax: Syntax): Parser[Terminal] = BasicLeafParser(syntax)
-
-   */
+  given Conversion[DSLEntity, Parser[Terminal]] with
+    def apply(entity: DSLEntity): Parser[Terminal] = BasicLeafParser(entity)
 
 }
