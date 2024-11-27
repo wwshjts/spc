@@ -7,10 +7,8 @@ import org.syspro.spc.parser.grammar.{Combinators, Parser}
 
 class ParseTest extends AnyFunSuite {
   test("test of basic parsers") {
-    val input = Lexer("-2")
+    val input = Lexer("1 * 2 - 1 * 3")
 
-    println(input)
-
-    println(factor(input))
+    println(term(input))
   }
 }

@@ -33,9 +33,9 @@ object Grammar {
   // **** Priority 2 ****
 
   // this thing parses (unary, List[(Terminal, Unary)) -> Binary
-  // firstly I need to get first binary expression, then try to fold tail
-  // (unary, List[(Terminal, Unary)) -> (unary, (Terminal, unary, List[(terminal, unary))) -> (binary, List(token
-  def factor: Parser[BinaryExpression] = (unary ~ **(("*" <|> "/") ~ unary)) ^^ (
+  // (Expression, List(Terminal, Expression)) ->
+  // List.isEmpty -> Expression
+  def factor: Parser[Expression] = (unary ~ **(("*" <|> "/") ~ unary)) ^^ (
     parsed => {
       val (left, ((op, right), tail)) = parsed
 
@@ -49,16 +49,17 @@ object Grammar {
           case  ASTERISK(_) => MULTIPLY(left, op, right)
           case  SLASH(_) => DIV(left, op, right)
       )
-    })
+    }
+    )
 
-  def term: Parser[BinaryExpression] = (factor ~ **(("+" <|> "-") ~ factor)) ^^ (
+  def term: Parser[Expression] = (factor ~ **(("+" <|> "-") ~ factor)) ^^ (
     parsed => {
       val (left, ((op, right), tail)) = parsed
 
       val first = op match
         case PLUS(_)  => ADD(left, op, right)
         case MINUS(_) => SUBTRACT(left, op, right)
-        
+
       tail.foldLeft(first)((left, term) =>
         val (op, right) = term
         op match
@@ -67,6 +68,4 @@ object Grammar {
       )
     }
   )
-
-
 }
