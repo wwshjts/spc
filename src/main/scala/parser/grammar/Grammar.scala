@@ -35,7 +35,7 @@ object Grammar {
   // this thing parses (unary, List[(Terminal, Unary)) -> Binary
   // (Expression, List(Terminal, Expression)) ->
   // List.isEmpty -> Expression
-  def factor: Parser[Expression] = (unary ~ **(("*" <|> "/") ~ unary)) ^^ (
+  def _factor: Parser[Expression] = (unary ~ **(("*" <|> "/") ~ unary)) ^^ (
     parsed => {
       val (left, ((op, right), tail)) = parsed
 
@@ -49,10 +49,11 @@ object Grammar {
           case  ASTERISK(_) => MULTIPLY(left, op, right)
           case  SLASH(_) => DIV(left, op, right)
       )
-    }
-    )
+    })
 
-  def term: Parser[Expression] = (factor ~ **(("+" <|> "-") ~ factor)) ^^ (
+  def factor = _factor <|> unary
+
+  def _term: Parser[Expression] = (factor ~ **(("+" <|> "-") ~ factor)) ^^ (
     parsed => {
       val (left, ((op, right), tail)) = parsed
 
@@ -68,4 +69,6 @@ object Grammar {
       )
     }
   )
+
+  def term = _term <|> factor
 }

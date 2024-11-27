@@ -206,16 +206,16 @@ object Combinators {
     lazy val p = p0
     val elems = new ListBuffer[A]
 
-    def continue(in: List[Token]): Result[List[A]] = {
+    def continue(in: List[Token]): Success[List[A]] = {
       val p0 = p
-      @tailrec def applyp(in0: List[Token]): Result[List[A]] =
+      @tailrec def applyp(in0: List[Token]): Success[List[A]] =
         if (in0.isEmpty) return Success(elems.toList, in0)
         p0(in0) match {
         case Success(result, remain_input) =>
           elems += result
           applyp(remain_input)
 
-        case f@Failure(msg) => f
+        case f: Failure => Success(elems.toList, in0)
       }
 
       applyp(in)
@@ -225,7 +225,6 @@ object Combinators {
       case Success(result, remain_input) =>
         continue(remain_input) match
           case Success(r1, remain_input) => Success((result, r1), remain_input)
-          case f @ Failure(msg) => f
       case f @ Failure(msg) => f
     }
   }
