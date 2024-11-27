@@ -29,46 +29,21 @@ object Grammar {
   def u_plus: Parser[UPlus]             = ("+" ~ unary) ^^ (p => UPlus(p._1, p._2))
   def bitwiseNot: Parser[BitwiseNot]    = ("~" ~ unary) ^^ (p => BitwiseNot(p._1, p._2))
 
-  // Binary expressions
   // **** Priority 2 ****
 
-  // this thing parses (unary, List[(Terminal, Unary)) -> Binary
-  // (Expression, List(Terminal, Expression)) ->
-  // List.isEmpty -> Expression
-  def _factor: Parser[Expression] = (unary ~ **(("*" <|> "/") ~ unary)) ^^ (
-    parsed => {
-      val (left, ((op, right), tail)) = parsed
+  // TODO: to another file
+  def mkBinary(repr: (Expression, ((Terminal, Expression), List[(Terminal, Expression)]))): Expression = {
+    val (left, ((op, right), tail)) = repr
 
-      val first = op match
-        case ASTERISK(_) => MULTIPLY(left, op, right)
-        case SLASH(_) => DIV(left, op, right)
+    val first = BinaryExpression(left, op, right)
 
-      tail.foldLeft(first)((left, term) =>
-        val (op, right) = term
-        op match
-          case  ASTERISK(_) => MULTIPLY(left, op, right)
-          case  SLASH(_) => DIV(left, op, right)
-      )
-    })
+    tail.foldLeft(first)((left, term) =>
+      val (op, right) = term
+      BinaryExpression(left, op, right)
+    )
+  }
 
-  def factor = _factor <|> unary
+  def factor: Parser[Expression] = (unary ~ **(("*" <|> "/") ~ unary) ^^ mkBinary) <|> unary
 
-  def _term: Parser[Expression] = (factor ~ **(("+" <|> "-") ~ factor)) ^^ (
-    parsed => {
-      val (left, ((op, right), tail)) = parsed
-
-      val first = op match
-        case PLUS(_)  => ADD(left, op, right)
-        case MINUS(_) => SUBTRACT(left, op, right)
-
-      tail.foldLeft(first)((left, term) =>
-        val (op, right) = term
-        op match
-          case PLUS(_) => ADD(left, op, right)
-          case MINUS(_) => SUBTRACT(left, op, right)
-      )
-    }
-  )
-
-  def term = _term <|> factor
+  def term: Parser[Expression]   = (factor ~ **(("+" <|> "-") ~ factor) ^^ mkBinary) <|> factor
 }

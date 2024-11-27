@@ -152,7 +152,7 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
   def flatMap[U](f: A => Parser[U]): Parser[U] = {
     ???
   }
-
+  
   /*
   problem I had parser of lists of pairs
   I need list of parsers of pairs
@@ -227,25 +227,6 @@ object Combinators {
       case f @ Failure(msg) => f
     }
   }
-
-  def foldBinary(p: => Parser[(Expression, List[(Terminal, Expression)])])(choose: (Expression, Terminal, Expression) => BinaryExpression): Parser[Expression] = {
-    p ^^ (parsed =>
-      val (left, list) = parsed
-
-      list match
-        case List() => left
-        case head :: tail =>
-          val (op, right) = head
-
-          val first = choose(left, op, right)
-
-          tail.foldLeft(first)((left, term) =>
-            val (op, right) = term
-            choose(left, op, right)
-          )
-      )
-  }
-  
 
 }
 

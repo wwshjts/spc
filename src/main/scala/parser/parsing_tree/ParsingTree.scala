@@ -140,6 +140,16 @@ case class SUBTRACT(left: ParsingTree, op: Terminal, right: ParsingTree)  extend
 case class MULTIPLY(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
 case class DIV(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 
+object BinaryExpression {
+  def apply(left: ParsingTree, op: Terminal, right: ParsingTree): BinaryExpression = {
+    op match
+      case t: PLUS      => ADD(left, op, right)
+      case t: MINUS     => SUBTRACT(left, op, right)
+      case t: ASTERISK  => MULTIPLY(left, op, right)
+      case t: SLASH     => DIV(left, op, right)
+  }
+}
+
 // ============================= Syntax ==========================
 
 /** needed for DSL */
