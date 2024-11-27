@@ -177,10 +177,11 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
 }
 
 object Combinators {
+  def **[A](p: => Parser[A]): Parser[(A, List[A])] = repeatAtLeastOnce(p)
 
-  def repeatAtLeastOnce[A](p: => Parser[A]): Parser[List[A]] = repeatAtLeastOnce(p, p)
+  def repeatAtLeastOnce[A](p: => Parser[A]): Parser[(A, List[A])] = repeatAtLeastOnce(p, p)
 
-  def repeatAtLeastOnce[A](first: => Parser[A], p0: => Parser[A]): Parser[List[A]] = { (in: List[Token]) =>
+  def repeatAtLeastOnce[A](first: => Parser[A], p0: => Parser[A]): Parser[(A, List[A])] = { (in: List[Token]) =>
     lazy val p = p0
     val elems = new ListBuffer[A]
 
@@ -201,8 +202,9 @@ object Combinators {
 
     first(in) match {
       case Success(result, remain_input) =>
-        elems += result
-        continue(remain_input)
+        continue(remain_input) match
+          case Success(r1, remain_input) => Success((result, r1), remain_input)
+          case f @ Failure(msg) => f
       case f @ Failure(msg) => f
     }
   }

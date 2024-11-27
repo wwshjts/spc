@@ -7,7 +7,7 @@ import org.syspro.spc.parser.grammar.{Combinators, Parser}
 
 class ParseTest extends AnyFunSuite {
   test("test of basic parsers") {
-    val input = Lexer("123i64 * 42i32 / 11")
+    val input = Lexer("123i64 * 42i32 / -11")
 
     println(factor(input))
   }

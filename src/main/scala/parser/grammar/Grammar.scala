@@ -9,6 +9,7 @@ import parser.parsing_tree.*
 object Grammar {
 
   import BasicLeafParser.{given_Conversion_String_Parser, given_Conversion_DSLEntity_Parser}
+  import Combinators.*
 
 
   // **** Priority 0 ****
@@ -31,27 +32,22 @@ object Grammar {
   // Binary expressions
   // **** Priority 2 ****
 
-  // def term: Parser[Binary] = (unary ~ ("*" <|> "/")) <|> unary <|> term
-  def factor = (unary ~ Combinators.repeatAtLeastOnce(("*" <|> "/") ~ unary)) ^^ (
+  // this thing parses (unary, List[(Terminal, Unary)) -> Binary
+  // firstly I need to get first binary expression, then try to fold tail
+  // (unary, List[(Terminal, Unary)) -> (unary, (Terminal, unary, List[(terminal, unary))) -> (binary, List(token
+  def factor = (unary ~ **(("*" <|> "/") ~ unary)) ^^ (
     parsed => {
-      val u = parsed._1
-      val list = parsed._2
-      println(list)
+      val (left, ((op, right), tail)) = parsed
 
-      list match
-        case head :: tail => {
-          val first = head._1 match {
-            case ASTERISK(_) => MULTIPLY(u, head._1, head._2)
-            case SLASH(_) => DIV(u, head._1, head._2)
-          }
+      val first = op match
+        case ASTERISK(_) => MULTIPLY(left, op, right)
+        case SLASH(_) => DIV(left, op, right)
 
-          tail.foldLeft(first)((left, op) => {
-            op._1 match
-              case ASTERISK(_) => MULTIPLY(left, op._1, op._2)
-              case SLASH(_) => DIV(left, op._1, op._2)
-
-          })
-        }
-    }
-    )
+      tail.foldLeft(first)((left, term) =>
+        val (op, right) = term
+        op match
+          case  ASTERISK(_) => MULTIPLY(left, op, right)
+          case  SLASH(_) => DIV(left, op, right)
+      )
+    })
 }
