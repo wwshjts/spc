@@ -113,6 +113,7 @@ case class MINUS(tkn: Token)        extends Leaf with Terminal(tkn)
 case class ASTERISK(tkn: Token)     extends Leaf with Terminal(tkn)
 case class SLASH(tkn: Token)        extends Leaf with Terminal(tkn)
 case class TILDE(tkn: Token)        extends Leaf with Terminal(tkn)
+case class PERCENT(tkn: Token)      extends Leaf with Terminal(tkn)
 // TODO: add other symbols to IR
 
 abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Primary
@@ -137,8 +138,10 @@ case class BooleanLiteral(op: Terminal)         extends LiteralExpr(op)
 abstract class BinaryExpression(left: ParsingTree, op: Terminal, right: ParsingTree) extends TernaryBranch(left, op, right) with Expression {}
 case class ADD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 case class SUBTRACT(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
+
 case class MULTIPLY(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
 case class DIV(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
+case class MOD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 
 object BinaryExpression {
   def apply(left: ParsingTree, op: Terminal, right: ParsingTree): BinaryExpression = {
@@ -147,6 +150,7 @@ object BinaryExpression {
       case t: MINUS     => SUBTRACT(left, op, right)
       case t: ASTERISK  => MULTIPLY(left, op, right)
       case t: SLASH     => DIV(left, op, right)
+      case t: PERCENT   => MOD(left, op, right)
   }
 }
 
@@ -173,6 +177,7 @@ trait DSLEntity {
         case ASTERISK => ASTERISK(token)
         case SLASH => SLASH(token)
         case TILDE => TILDE(token)
+        case PERCENT => PERCENT(token)
       }
       case t: BuiltInType => t match
         case INTEGER => INTEGER(token)
@@ -200,6 +205,7 @@ case object MINUS         extends Symbol
 case object ASTERISK      extends Symbol
 case object SLASH         extends Symbol
 case object TILDE         extends Symbol
+case object PERCENT       extends Symbol
 // TODO: add all Symbols
 
 // TODO: Do i really need hierachy for built-in's???
@@ -219,6 +225,7 @@ object Symbol {
       case "*" => ASTERISK
       case "/" => SLASH
       case "~" => TILDE
+      case "%" => PERCENT
   }
 }
 

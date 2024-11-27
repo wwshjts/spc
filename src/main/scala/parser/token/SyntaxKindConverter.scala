@@ -117,8 +117,7 @@ object SyntaxKindConverter {
     case lexer.Symbol.MINUS => parsing_tree.MINUS
     case lexer.Symbol.ASTERISK => parsing_tree.ASTERISK
     case lexer.Symbol.SLASH => parsing_tree.SLASH
-    // TODO:
-    case lexer.Symbol.PERCENT => ???
+    case lexer.Symbol.PERCENT => parsing_tree.PERCENT
     case lexer.Symbol.EXCLAMATION => ???
     case lexer.Symbol.TILDE => parsing_tree.TILDE
     case lexer.Symbol.AMPERSAND => ???

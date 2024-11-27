@@ -45,5 +45,5 @@ object Grammar {
 
   def factor: Parser[Expression] = (unary ~ **(("*" <|> "/") ~ unary) ^^ mkBinary) <|> unary
 
-  def term: Parser[Expression]   = (factor ~ **(("+" <|> "-") ~ factor) ^^ mkBinary) <|> factor
+  def term: Parser[Expression]   = (factor ~ **(("+" <|> "-" <|> "%") ~ factor) ^^ mkBinary) <|> factor
 }
