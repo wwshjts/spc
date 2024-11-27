@@ -14,9 +14,11 @@ import scala.collection.mutable.ListBuffer
 sealed trait Result[+A] {
   def map[U](f: A => U): Result[U]
 }
+
 case class Success[+A](result: A, remain_input: List[Token]) extends Result[A] {
   override def map[U](f: A => U): Result[U] = Success(f(result), remain_input)
 }
+
 case class Failure(msg: Predef.String) extends Result[Nothing] {
   override def map[U](f: Nothing => U): Result[U] = Failure(msg)
 }
@@ -178,6 +180,25 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
 
 object Combinators {
   def **[A](p: => Parser[A]): Parser[(A, List[A])] = repeatAtLeastOnce(p)
+
+  def |**[A](p: => Parser[A]): Parser[List[A]] = repeatAtLeastOnce(p) ^^ (parsed =>
+    parsed match
+      case (head, tail) => head :: tail
+    )
+
+  def *?[A](p: => Parser[A]): Parser[List[A]] = repeat(p)
+
+  def repeat[A](p: => Parser[A]): Parser[List[A]] = {
+    def applyp(input: List[Token]): Result[List[A]] = {
+      |**(p)(input) match
+        case Success(result, remain_input) => Success(result, remain_input)
+        case Failure(msg) => Success(List.empty, input)
+        // TODO: add fatal error
+    }
+
+    applyp
+  }
+
 
   def repeatAtLeastOnce[A](p: => Parser[A]): Parser[(A, List[A])] = repeatAtLeastOnce(p, p)
 
