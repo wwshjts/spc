@@ -251,7 +251,7 @@ object BasicLeafParser {
       Parser.consume(input) { (token: Token) =>
 
         val syntax = SyntaxKindConverter(token)
-        if (syntax == toMatch) Success(toMatch.of(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax")
+        if (syntax == toMatch) Success(toMatch(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax")
       }
     }
   }

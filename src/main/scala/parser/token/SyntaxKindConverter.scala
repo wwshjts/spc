@@ -17,8 +17,8 @@ object SyntaxKindConverter {
 
   def keyword(kw: Keyword): DSLEntity = {
     kw match
-      case Keyword.THIS => ???
-      case Keyword.SUPER => ???
+      case Keyword.THIS => parsing_tree.THIS
+      case Keyword.SUPER => parsing_tree.SUPER 
       case Keyword.IS => ???
       case Keyword.IF => ???
       case Keyword.ELSE => ???
@@ -38,7 +38,7 @@ object SyntaxKindConverter {
       case Keyword.CLASS => ???
       case Keyword.OBJECT => ???
       case Keyword.INTERFACE => ???
-      case Keyword.NULL => ???
+      case Keyword.NULL => parsing_tree.NULL
   }
 
   def kind(k: SyntaxKind): DSLEntity = {

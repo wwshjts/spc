@@ -1,6 +1,7 @@
 package org.syspro.spc
 package parser.parsing_tree
 
+import org.syspro.spc.parser.parsing_tree
 import syspro.tm.lexer.Token
 import syspro.tm.parser.{AnySyntaxKind, SyntaxKind, SyntaxNode}
 
@@ -77,11 +78,13 @@ sealed trait Grammar extends ParsingTree {
  * Represents Terminal symbols of the grammar
  * Also Terminal Nodes is elements of DSL Language of ParserCombinatorLib
  */
-sealed trait Terminal(tkn: Token) extends Grammar with DSLEntity {
+sealed trait Terminal(tkn: Token) extends Grammar {
   override def token(): Token = tkn
 }
 
 sealed trait Expression extends Grammar
+
+sealed trait Atom extends Primary
 
 sealed trait Primary extends Expression
 
@@ -116,7 +119,12 @@ case class TILDE(tkn: Token)        extends Leaf with Terminal(tkn)
 case class PERCENT(tkn: Token)      extends Leaf with Terminal(tkn)
 // TODO: add other symbols to IR
 
-abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Primary
+// keyword
+case class THIS(tkn: Token)         extends Leaf with Terminal(tkn)
+case class SUPER(tkn: Token)        extends Leaf with Terminal(tkn)
+case class NULL(tkn: Token)         extends Leaf with Terminal(tkn)
+
+abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Atom
 
 /**
  * Trait which specify branch with only one descendant
@@ -133,7 +141,12 @@ case class IntegerLiteral(op: Terminal)         extends LiteralExpr(op)
 case class RuneLiteral(op: Terminal)            extends LiteralExpr(op)
 case class BooleanLiteral(op: Terminal)         extends LiteralExpr(op)
 
-//TODO: case class GroupBy(op: ParsingTree)       extends Unary(op)
+case class ThisExpr(op: Terminal)               extends LiteralExpr(op)
+case class SuperExpr(op: Terminal)              extends LiteralExpr(op)
+case class NullLiteral(op: Terminal)            extends LiteralExpr(op)
+
+case class GroupBy(leftb: Terminal, expr: ParsingTree, rightb: Terminal)              extends TernaryBranch(leftb, expr, rightb) with Primary
+case class MemberAccess(left: ParsingTree, dot: Terminal, i: Terminal)                extends TernaryBranch(left, dot, i) with Primary
 
 abstract class BinaryExpression(left: ParsingTree, op: Terminal, right: ParsingTree) extends TernaryBranch(left, op, right) with Expression {}
 case class ADD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
@@ -159,8 +172,8 @@ object BinaryExpression {
 /** needed for DSL */
 trait DSLEntity {
   // TODO: def kind(): AnySyntaxKind
+  def apply(tkn: Token): Terminal
 
-  // TODO
   def of(token: Token): Terminal = {
     this match {
       case INDENT => INDENT(token)
@@ -168,6 +181,7 @@ trait DSLEntity {
       case RUNE => RUNE(token)
       case IDENTIFIER => IDENTIFIER(token)
       case BAD => BAD(token)
+      case NULL => BAD(token)
       case symbol: Symbol => symbol match {
         case DOT => DOT(token)
         case COLON => COLON(token)
@@ -188,13 +202,20 @@ trait DSLEntity {
   }
 }
 
-case object INDENT        extends DSLEntity
-case object DEDENT        extends DSLEntity
+case object INDENT        extends DSLEntity { override def apply(tkn: Token): Terminal = new INDENT(tkn) }
 
-case object RUNE          extends DSLEntity
-case object IDENTIFIER    extends DSLEntity
+case object DEDENT        extends DSLEntity { override def apply(tkn: Token): Terminal = new DEDENT(tkn) }
 
-case object BAD           extends DSLEntity
+case object RUNE          extends DSLEntity { override def apply(tkn: Token): Terminal = new RUNE(tkn) }
+
+case object IDENTIFIER    extends DSLEntity { override def apply(tkn: Token): Terminal = new IDENTIFIER(tkn) }
+
+case object BAD           extends DSLEntity { override def apply(tkn: Token): Terminal = new BAD(tkn) }
+
+// Keyword
+case object THIS          extends DSLEntity { override def apply(tkn: Token): Terminal = new THIS(tkn) }
+case object SUPER         extends DSLEntity { override def apply(tkn: Token): Terminal = new SUPER(tkn) }
+case object NULL          extends DSLEntity { override def apply(tkn: Token): Terminal = new NULL(tkn) }
 
 sealed trait Symbol       extends DSLEntity
 case object DOT           extends Symbol
@@ -228,4 +249,3 @@ object Symbol {
       case "%" => PERCENT
   }
 }
-
