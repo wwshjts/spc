@@ -23,10 +23,10 @@ object Grammar {
   def null_lit: Parser[NullLiteral]     = NULL ^^ NullLiteral
   def this_expr: Parser[ThisExpr]       = THIS ^^ ThisExpr
   def super_expr: Parser[SuperExpr]     = SUPER ^^ SuperExpr
+  def identif: Parser[IdentifierName]   = IDENTIFIER ^^ IdentifierName
 
   def atom: Parser[Atom] = integer <|> string <|> bool <|> rune <|> this_expr
-                                            <|> super_expr <|> null_lit
-
+                                            <|> super_expr <|> null_lit <|> identif
   // **** Priority 0 ****
   // primary expressions
 
@@ -35,10 +35,11 @@ object Grammar {
     parsed =>  { val ((lb, expr), rb) = parsed; GroupBy(lb, expr, rb) }
   )
 
-  def primary:Parser[Primary] = primary <|> group <|> memberAccess
-  // (null.first).second
-  def memberAccess: Parser[Primary] = primary ~ DOT ~ IDENTIFIER ^^ ???
+  def primary:Parser[Primary] = memberAccess <|> atom
 
+  // (null.first).second
+  def memberAccess: Parser[Primary] = atom ~ **(DOT ~ IDENTIFIER) ^^ (parsed => flatten1(parsed))
+    ^^ (parsed => foldFirst(parsed)(MemberAccess)) ^^ (parsed => foldTernary(parsed)(MemberAccess))
 
   // **** Priority 1 ****
   // Unary expression
@@ -51,6 +52,12 @@ object Grammar {
   // **** Priority 2 ****
 
   // TODO: to another file
+
+
+  def factor: Parser[Expression] = (unary ~ **(("*" <|> "/") ~ unary) ^^ mkBinary) <|> unary
+
+  def term: Parser[Expression]   = (factor ~ **(("+" <|> "-" <|> "%") ~ factor) ^^ mkBinary) <|> factor
+
   def mkBinary(repr: (Expression, ((Terminal, Expression), List[(Terminal, Expression)]))): Expression = {
     val (left, ((op, right), tail)) = repr
 
@@ -62,7 +69,21 @@ object Grammar {
     )
   }
 
-  def factor: Parser[Expression] = (unary ~ **(("*" <|> "/") ~ unary) ^^ mkBinary) <|> unary
+  def flatten1[A <: ParsingTree, B <: ParsingTree, C <: ParsingTree](repr: (A, ((B,C), List[(B, C)]))): (A, B, C, List[(B, C)]) = {
+    val (first, ((second, third), tail)) = repr
+    (first, second, third, tail)
+  }
 
-  def term: Parser[Expression]   = (factor ~ **(("+" <|> "-" <|> "%") ~ factor) ^^ mkBinary) <|> factor
+  def foldFirst[A <: ParsingTree, B <: ParsingTree, C <: ParsingTree, T <: TernaryBranch](repr: (A, B, C, List[(B, C)]))( f: (A, B, C) => T): (T, List[(B, C)]) = {
+    val (a, b, c, tail) = repr
+    (f(a, b, c), tail)
+  }
+
+  def foldTernary[T <: TernaryBranch, A <: ParsingTree, B <: ParsingTree](repr: (T, List[(A, B)]))(f: (T, A, B) => T): T = {
+    val (first, tail) = repr
+    tail.foldLeft(first)( (left, term) =>
+      val (op, right) = term
+      f(left, op, right)
+    )
+  }
 }

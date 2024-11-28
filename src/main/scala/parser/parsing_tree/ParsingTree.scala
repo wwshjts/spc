@@ -144,6 +144,7 @@ case class BooleanLiteral(op: Terminal)         extends LiteralExpr(op)
 case class ThisExpr(op: Terminal)               extends LiteralExpr(op)
 case class SuperExpr(op: Terminal)              extends LiteralExpr(op)
 case class NullLiteral(op: Terminal)            extends LiteralExpr(op)
+case class IdentifierName(op: Terminal)         extends LiteralExpr(op)
 
 case class GroupBy(leftb: Terminal, expr: ParsingTree, rightb: Terminal)              extends TernaryBranch(leftb, expr, rightb) with Primary
 case class MemberAccess(left: ParsingTree, dot: Terminal, i: Terminal)                extends TernaryBranch(left, dot, i) with Primary
