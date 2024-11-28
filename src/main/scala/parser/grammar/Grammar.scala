@@ -59,7 +59,7 @@ object Grammar {
 
   // **** Priority 1 ****
   // Unary expression
-  def unary: Parser[Expression] = (negate <|> u_plus <|> bitwiseNot) <|> primary
+  def unary: Parser[Expression] = (negate <|> u_plus <|> bitwiseNot) <|> invoke
 
   def negate: Parser[Negate]            = ("-" ~ unary) ^^ (p => Negate(p._1, p._2))
   def u_plus: Parser[UPlus]             = ("+" ~ unary) ^^ (p => UPlus(p._1, p._2))
