@@ -131,8 +131,8 @@ object SyntaxKindConverter {
     case lexer.Symbol.GREATER_THAN_EQUALS => ???
     case lexer.Symbol.LESS_THAN_LESS_THAN => ???
     case lexer.Symbol.GREATER_THAN_GREATER_THAN => ???
-    case lexer.Symbol.OPEN_BRACKET => ???
-    case lexer.Symbol.CLOSE_BRACKET => ???
+    case lexer.Symbol.OPEN_BRACKET => parsing_tree.OPEN_BRACKET
+    case lexer.Symbol.CLOSE_BRACKET => parsing_tree.CLOSE_BRACKET
     case lexer.Symbol.OPEN_PAREN => parsing_tree.OPEN_PAREN
     case lexer.Symbol.CLOSE_PAREN => parsing_tree.CLOSE_PAREN
     case lexer.Symbol.EQUALS => ???

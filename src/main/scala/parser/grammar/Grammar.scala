@@ -35,17 +35,17 @@ object Grammar {
     parsed =>  { val ((lb, expr), rb) = parsed; GroupBy(lb, expr, rb) }
   )
 
-  def primary:Parser[Primary] = memberAccess <|> index_expr <|> atom <|> group
+  def primary:Parser[Primary] =   index_expr <|> memberAccess <|> group <|> atom
 
   // (null.first).second
-  def memberAccess: Parser[Primary] = atom ~ **(DOT ~ IDENTIFIER)
-    ^^ (parsed => flatten1(parsed)) ^^ (parsed => foldFirst(parsed)(MemberAccess)) ^^ (parsed => foldTernary(parsed)(MemberAccess))
+  def memberAccess: Parser[Primary] = (atom ~ **(DOT ~ IDENTIFIER)
+    ^^ (parsed => flatten1(parsed)) ^^ (parsed => foldFirst(parsed)(MemberAccess)) ^^ (parsed => foldTernary(parsed)(MemberAccess))) <|> atom
 
   // (null.first).second(1)
-  def index_expr: Parser[Index] = atom ~ "[" ~ term ~ "]" ^^ ( parsed =>
+  def index_expr: Parser[Primary] = (memberAccess ~ "[" ~ term ~ "]" ^^ ( parsed =>
     val (((indexed, lb), expr), rb) = parsed
     Index(indexed, lb, expr, rb)
-  )
+  )) <|> memberAccess
 
 
 
@@ -65,6 +65,11 @@ object Grammar {
   def factor: Parser[Expression] = (unary ~ **(("*" <|> "/") ~ unary) ^^ mkBinary) <|> unary
 
   def term: Parser[Expression]   = (factor ~ **(("+" <|> "-" <|> "%") ~ factor) ^^ mkBinary) <|> factor
+
+  // **** ****
+
+  def expression: Parser[Expression] = term
+  // **********
 
   def mkBinary(repr: (Expression, ((Terminal, Expression), List[(Terminal, Expression)]))): Expression = {
     val (left, ((op, right), tail)) = repr
