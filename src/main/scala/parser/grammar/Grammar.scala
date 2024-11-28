@@ -36,15 +36,15 @@ object Grammar {
   // primary expressions
 
   // TODO: subs atom here
-  def group: Parser[GroupBy] = "(" ~ term ~ ")" ^^ (
+  def group: Parser[Primary] = ("(" ~ expression ~ ")" ^^ (
     parsed =>  { val ((lb, expr), rb) = parsed; GroupBy(lb, expr, rb) }
-  )
+  )) <|> atom
 
   def primary:Parser[Primary] =  invoke <|> index_expr <|> memberAccess <|> group <|> atom
 
   // (null.first).second
-  def memberAccess: Parser[Primary] = (atom ~ **(DOT ~ IDENTIFIER)
-    ^^ (parsed => flatten1(parsed)) ^^ (parsed => foldFirst(parsed)(MemberAccess)) ^^ (parsed => foldTernary(parsed)(MemberAccess))) <|> atom
+  def memberAccess: Parser[Primary] = (group ~ **(DOT ~ IDENTIFIER)
+    ^^ (parsed => flatten1(parsed)) ^^ (parsed => foldFirst(parsed)(MemberAccess)) ^^ (parsed => foldTernary(parsed)(MemberAccess))) <|> group
 
   // TODO: do I really need to backtrack memberAcces here??? and same rules up???
   def index_expr: Parser[Primary] = (memberAccess ~ "[" ~ term ~ "]" ^^ ( parsed =>
@@ -52,12 +52,10 @@ object Grammar {
     Index(indexed, lb, expr, rb)
   )) <|> memberAccess
 
-  def invoke: Parser[Primary] = (index_expr ~ "(" ~ separatedList_expr_comma ~ ")") ^^ ( parsed =>
+  def invoke: Parser[Primary] = ((index_expr ~ "(" ~ separatedList_expr_comma ~ ")") ^^ ( parsed =>
     val (((inv, lb), sep_list), rb) = parsed
     Invoke(inv, lb, sep_list, rb)
-  )
-
-
+  )) <|> index_expr
 
   // **** Priority 1 ****
   // Unary expression
