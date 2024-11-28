@@ -117,6 +117,8 @@ case class ASTERISK(tkn: Token)     extends Leaf with Terminal(tkn)
 case class SLASH(tkn: Token)        extends Leaf with Terminal(tkn)
 case class TILDE(tkn: Token)        extends Leaf with Terminal(tkn)
 case class PERCENT(tkn: Token)      extends Leaf with Terminal(tkn)
+case class OPEN_PAREN(tkn: Token)   extends Leaf with Terminal(tkn)
+case class CLOSE_PAREN(tkn: Token)  extends Leaf with Terminal(tkn)
 // TODO: add other symbols to IR
 
 // keyword
@@ -228,6 +230,8 @@ case object ASTERISK      extends Symbol
 case object SLASH         extends Symbol
 case object TILDE         extends Symbol
 case object PERCENT       extends Symbol
+case object OPEN_PAREN    extends Symbol
+case object CLOSE_PAREN   extends Symbol
 // TODO: add all Symbols
 
 // TODO: Do i really need hierachy for built-in's???
@@ -248,5 +252,7 @@ object Symbol {
       case "/" => SLASH
       case "~" => TILDE
       case "%" => PERCENT
+      case "(" => OPEN_PAREN
+      case ")" => CLOSE_PAREN
   }
 }

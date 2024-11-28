@@ -31,19 +31,19 @@ object Grammar {
   // primary expressions
 
   // TODO: subs atom here
-  def group: Parser[GroupBy] = "(" ~ atom ~ ")" ^^ (
+  def group: Parser[GroupBy] = "(" ~ term ~ ")" ^^ (
     parsed =>  { val ((lb, expr), rb) = parsed; GroupBy(lb, expr, rb) }
   )
 
-  def primary:Parser[Primary] = memberAccess <|> atom
+  def primary:Parser[Primary] = memberAccess <|> atom <|> group
 
   // (null.first).second
-  def memberAccess: Parser[Primary] = atom ~ **(DOT ~ IDENTIFIER) ^^ (parsed => flatten1(parsed))
-    ^^ (parsed => foldFirst(parsed)(MemberAccess)) ^^ (parsed => foldTernary(parsed)(MemberAccess))
+  def memberAccess: Parser[Primary] = atom ~ **(DOT ~ IDENTIFIER)
+    ^^ (parsed => flatten1(parsed)) ^^ (parsed => foldFirst(parsed)(MemberAccess)) ^^ (parsed => foldTernary(parsed)(MemberAccess))
 
   // **** Priority 1 ****
   // Unary expression
-  def unary: Parser[Expression] = (negate <|> u_plus <|> bitwiseNot) <|> atom
+  def unary: Parser[Expression] = (negate <|> u_plus <|> bitwiseNot) <|> primary
 
   def negate: Parser[Negate]            = ("-" ~ unary) ^^ (p => Negate(p._1, p._2))
   def u_plus: Parser[UPlus]             = ("+" ~ unary) ^^ (p => UPlus(p._1, p._2))
