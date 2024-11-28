@@ -35,11 +35,19 @@ object Grammar {
     parsed =>  { val ((lb, expr), rb) = parsed; GroupBy(lb, expr, rb) }
   )
 
-  def primary:Parser[Primary] = memberAccess <|> atom <|> group
+  def primary:Parser[Primary] = memberAccess <|> index_expr <|> atom <|> group
 
   // (null.first).second
   def memberAccess: Parser[Primary] = atom ~ **(DOT ~ IDENTIFIER)
     ^^ (parsed => flatten1(parsed)) ^^ (parsed => foldFirst(parsed)(MemberAccess)) ^^ (parsed => foldTernary(parsed)(MemberAccess))
+
+  // (null.first).second(1)
+  def index_expr: Parser[Index] = atom ~ "[" ~ term ~ "]" ^^ ( parsed =>
+    val (((indexed, lb), expr), rb) = parsed
+    Index(indexed, lb, expr, rb)
+  )
+
+
 
   // **** Priority 1 ****
   // Unary expression

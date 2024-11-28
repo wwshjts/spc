@@ -61,6 +61,12 @@ sealed trait TernaryBranch(first: ParsingTree, second: ParsingTree, third: Parsi
   override def rank(): Int = 3
 }
 
+abstract class VarargBranch(args: ParsingTree*) extends Branch {
+  override def apply(index: Int): Option[ParsingTree] = if (args.isDefinedAt(index)) Some(args(index)) else None
+
+  override def rank(): Int = args.size
+}
+
 sealed trait Leaf extends Tree {
   override def apply(index: Int): Option[ParsingTree] = None
 
@@ -108,26 +114,27 @@ case class INTEGER(tkn: Token)      extends Leaf with Terminal(tkn)
 case class STRING(tkn: Token)       extends Leaf with Terminal(tkn)
 
 // Symbols
-case class DOT(tkn: Token)          extends Leaf with Terminal(tkn)
-case class COLON(tkn: Token)        extends Leaf with Terminal(tkn)
-case class COMMA(tkn: Token)        extends Leaf with Terminal(tkn)
-case class PLUS(tkn: Token)         extends Leaf with Terminal(tkn)
-case class MINUS(tkn: Token)        extends Leaf with Terminal(tkn)
-case class ASTERISK(tkn: Token)     extends Leaf with Terminal(tkn)
-case class SLASH(tkn: Token)        extends Leaf with Terminal(tkn)
-case class TILDE(tkn: Token)        extends Leaf with Terminal(tkn)
-case class PERCENT(tkn: Token)      extends Leaf with Terminal(tkn)
-case class OPEN_PAREN(tkn: Token)   extends Leaf with Terminal(tkn)
-case class CLOSE_PAREN(tkn: Token)  extends Leaf with Terminal(tkn)
+case class DOT(tkn: Token)            extends Leaf with Terminal(tkn)
+case class COLON(tkn: Token)          extends Leaf with Terminal(tkn)
+case class COMMA(tkn: Token)          extends Leaf with Terminal(tkn)
+case class PLUS(tkn: Token)           extends Leaf with Terminal(tkn)
+case class MINUS(tkn: Token)          extends Leaf with Terminal(tkn)
+case class ASTERISK(tkn: Token)       extends Leaf with Terminal(tkn)
+case class SLASH(tkn: Token)          extends Leaf with Terminal(tkn)
+case class TILDE(tkn: Token)          extends Leaf with Terminal(tkn)
+case class PERCENT(tkn: Token)        extends Leaf with Terminal(tkn)
+case class OPEN_PAREN(tkn: Token)     extends Leaf with Terminal(tkn)
+case class CLOSE_PAREN(tkn: Token)    extends Leaf with Terminal(tkn)
+case class OPEN_BRACKET(tkn: Token)   extends Leaf with Terminal(tkn)
+case class CLOSE_BRACKET(tkn: Token)  extends Leaf with Terminal(tkn)
 // TODO: add other symbols to IR
 
 // keyword
-case class THIS(tkn: Token)         extends Leaf with Terminal(tkn)
-case class SUPER(tkn: Token)        extends Leaf with Terminal(tkn)
-case class NULL(tkn: Token)         extends Leaf with Terminal(tkn)
+case class THIS(tkn: Token)           extends Leaf with Terminal(tkn)
+case class SUPER(tkn: Token)          extends Leaf with Terminal(tkn)
+case class NULL(tkn: Token)           extends Leaf with Terminal(tkn)
 
 abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Atom
-
 /**
  * Trait which specify branch with only one descendant
  */
@@ -150,6 +157,7 @@ case class IdentifierName(op: Terminal)         extends LiteralExpr(op)
 
 case class GroupBy(leftb: Terminal, expr: ParsingTree, rightb: Terminal)              extends TernaryBranch(leftb, expr, rightb) with Primary
 case class MemberAccess(left: ParsingTree, dot: Terminal, i: Terminal)                extends TernaryBranch(left, dot, i) with Primary
+case class Index(indexed: ParsingTree, l: Terminal, index: ParsingTree, r: Terminal)  extends VarargBranch(indexed, l, index, r) with Primary
 
 abstract class BinaryExpression(left: ParsingTree, op: Terminal, right: ParsingTree) extends TernaryBranch(left, op, right) with Expression {}
 case class ADD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
@@ -232,6 +240,8 @@ case object TILDE         extends Symbol
 case object PERCENT       extends Symbol
 case object OPEN_PAREN    extends Symbol
 case object CLOSE_PAREN   extends Symbol
+case object OPEN_BRACKET  extends Symbol
+case object CLOSE_BRACKET extends Symbol
 // TODO: add all Symbols
 
 // TODO: Do i really need hierachy for built-in's???
@@ -254,5 +264,7 @@ object Symbol {
       case "%" => PERCENT
       case "(" => OPEN_PAREN
       case ")" => CLOSE_PAREN
+      case "[" => OPEN_BRACKET
+      case "]" => CLOSE_BRACKET
   }
 }
