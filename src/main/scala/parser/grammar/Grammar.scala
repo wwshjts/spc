@@ -25,6 +25,11 @@ object Grammar {
   def super_expr: Parser[SuperExpr]     = SUPER ^^ SuperExpr
   def identif: Parser[IdentifierName]   = IDENTIFIER ^^ IdentifierName
 
+  def separatedList_expr_comma: Parser[SeparatedList] = (*?(expression ~ ",")) ~ expression ^^ (parsed =>
+      val (list, expr) = parsed
+      SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
+    )
+
   def atom: Parser[Atom] = integer <|> string <|> bool <|> rune <|> this_expr
                                             <|> super_expr <|> null_lit <|> identif
   // **** Priority 0 ****
@@ -35,17 +40,22 @@ object Grammar {
     parsed =>  { val ((lb, expr), rb) = parsed; GroupBy(lb, expr, rb) }
   )
 
-  def primary:Parser[Primary] =   index_expr <|> memberAccess <|> group <|> atom
+  def primary:Parser[Primary] =  invoke <|> index_expr <|> memberAccess <|> group <|> atom
 
   // (null.first).second
   def memberAccess: Parser[Primary] = (atom ~ **(DOT ~ IDENTIFIER)
     ^^ (parsed => flatten1(parsed)) ^^ (parsed => foldFirst(parsed)(MemberAccess)) ^^ (parsed => foldTernary(parsed)(MemberAccess))) <|> atom
 
-  // (null.first).second(1)
+  // TODO: do I really need to backtrack memberAcces here??? and same rules up???
   def index_expr: Parser[Primary] = (memberAccess ~ "[" ~ term ~ "]" ^^ ( parsed =>
     val (((indexed, lb), expr), rb) = parsed
     Index(indexed, lb, expr, rb)
   )) <|> memberAccess
+
+  def invoke: Parser[Primary] = (index_expr ~ "(" ~ separatedList_expr_comma ~ ")") ^^ ( parsed =>
+    val (((inv, lb), sep_list), rb) = parsed
+    Invoke(inv, lb, sep_list, rb)
+  )
 
 
 

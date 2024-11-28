@@ -95,7 +95,6 @@ sealed trait Atom extends Primary
 sealed trait Primary extends Expression
 
 sealed trait BinaryExpr extends Expression
-
 // ---------------------------------------------
 
 
@@ -134,6 +133,9 @@ case class THIS(tkn: Token)           extends Leaf with Terminal(tkn)
 case class SUPER(tkn: Token)          extends Leaf with Terminal(tkn)
 case class NULL(tkn: Token)           extends Leaf with Terminal(tkn)
 
+// some real shit
+case class SeparatedList(node: ParsingTree*)  extends VarargBranch(node*) with Grammar
+
 abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Atom
 /**
  * Trait which specify branch with only one descendant
@@ -158,6 +160,7 @@ case class IdentifierName(op: Terminal)         extends LiteralExpr(op)
 case class GroupBy(leftb: Terminal, expr: ParsingTree, rightb: Terminal)              extends TernaryBranch(leftb, expr, rightb) with Primary
 case class MemberAccess(left: ParsingTree, dot: Terminal, i: Terminal)                extends TernaryBranch(left, dot, i) with Primary
 case class Index(indexed: ParsingTree, l: Terminal, index: ParsingTree, r: Terminal)  extends VarargBranch(indexed, l, index, r) with Primary
+case class Invoke(i: ParsingTree, lp: Terminal, list: SeparatedList, rp: Terminal)    extends VarargBranch(i, lp, list, rp) with Primary
 
 abstract class BinaryExpression(left: ParsingTree, op: Terminal, right: ParsingTree) extends TernaryBranch(left, op, right) with Expression {}
 case class ADD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
@@ -249,6 +252,8 @@ sealed trait BuiltInType  extends DSLEntity
 case object INTEGER       extends BuiltInType
 case object BOOLEAN       extends BuiltInType
 case object STRING        extends BuiltInType
+
+// Nonterminals
 
 object Symbol {
   def apply(symbol: Predef.String): Symbol = {
