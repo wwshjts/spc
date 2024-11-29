@@ -5,7 +5,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.syspro.spc.lexer.Lexer
 import parser.parsing_tree.*
 
-import org.syspro.spc.parser.grammar.Grammar.{and, bitwiseAnd, bitwiseOr, expression, shift, xor}
+import org.syspro.spc.parser.grammar.Grammar.{and, bitwiseAnd, bitwiseOr, expression, factor, shift, xor}
 import org.syspro.spc.parser.grammar.Success
 
 // import org.syspro.spc.parser.parsing_tree.{INTEGER, IntegerLiteral, LEFT_SHIFT, RIGHT_SHIFT, RIGHT_RIGHT}
@@ -13,6 +13,45 @@ import org.syspro.spc.parser.grammar.Success
 
 
 class Expression extends AnyFunSuite {
+
+  test("factors are left associative") {
+    val input = Lexer("1 * 2 / 3 * 4")
+    val res = factor(input)
+
+    val expected =
+      Success(
+        MULTIPLY(
+          DIV(
+            MULTIPLY(
+              IntegerLiteral(INTEGER(input(0))),
+              ASTERISK(input(1)),
+              IntegerLiteral(INTEGER(input(2)))
+            ),
+            SLASH(input(3)),
+            IntegerLiteral(INTEGER(input(4)))
+          ),
+          ASTERISK(input(5)),
+          IntegerLiteral(INTEGER(input(6)))
+        ), List()
+      )
+
+    assertResult(expected)(res)
+  }
+
+  test("factor should also match expressions with lower priority") {
+    val input = Lexer("-1")
+    val res = factor(input)
+
+    val expected =
+      Success(
+        Negate(
+          MINUS(input(0)),
+          IntegerLiteral(INTEGER(input(1)))
+        ), List()
+      )
+  }
+
+
   test("shifts") {
     val input = Lexer("1 >> 2 << 2")
     
