@@ -113,21 +113,22 @@ case class INTEGER(tkn: Token)      extends Leaf with Terminal(tkn)
 case class STRING(tkn: Token)       extends Leaf with Terminal(tkn)
 
 // Symbols
-case class DOT(tkn: Token)            extends Leaf with Terminal(tkn)
-case class COLON(tkn: Token)          extends Leaf with Terminal(tkn)
-case class COMMA(tkn: Token)          extends Leaf with Terminal(tkn)
-case class PLUS(tkn: Token)           extends Leaf with Terminal(tkn)
-case class MINUS(tkn: Token)          extends Leaf with Terminal(tkn)
-case class ASTERISK(tkn: Token)       extends Leaf with Terminal(tkn)
-case class SLASH(tkn: Token)          extends Leaf with Terminal(tkn)
-case class TILDE(tkn: Token)          extends Leaf with Terminal(tkn)
-case class PERCENT(tkn: Token)        extends Leaf with Terminal(tkn)
-case class OPEN_PAREN(tkn: Token)     extends Leaf with Terminal(tkn)
-case class CLOSE_PAREN(tkn: Token)    extends Leaf with Terminal(tkn)
-case class OPEN_BRACKET(tkn: Token)   extends Leaf with Terminal(tkn)
-case class CLOSE_BRACKET(tkn: Token)  extends Leaf with Terminal(tkn)
-case class LEFT_LEFT(tkn: Token)      extends Leaf with Terminal(tkn)
-case class RIGHT_RIGHT(tkn: Token)    extends Leaf with Terminal(tkn)
+case class DOT(tkn: Token)                   extends Leaf with Terminal(tkn)
+case class COLON(tkn: Token)                 extends Leaf with Terminal(tkn)
+case class COMMA(tkn: Token)                 extends Leaf with Terminal(tkn)
+case class PLUS(tkn: Token)                  extends Leaf with Terminal(tkn)
+case class MINUS(tkn: Token)                 extends Leaf with Terminal(tkn)
+case class ASTERISK(tkn: Token)              extends Leaf with Terminal(tkn)
+case class SLASH(tkn: Token)                 extends Leaf with Terminal(tkn)
+case class TILDE(tkn: Token)                 extends Leaf with Terminal(tkn)
+case class PERCENT(tkn: Token)               extends Leaf with Terminal(tkn)
+case class OPEN_PAREN(tkn: Token)            extends Leaf with Terminal(tkn)
+case class CLOSE_PAREN(tkn: Token)           extends Leaf with Terminal(tkn)
+case class OPEN_BRACKET(tkn: Token)          extends Leaf with Terminal(tkn)
+case class CLOSE_BRACKET(tkn: Token)         extends Leaf with Terminal(tkn)
+case class LEFT_LEFT(tkn: Token)             extends Leaf with Terminal(tkn)
+case class RIGHT_RIGHT(tkn: Token)           extends Leaf with Terminal(tkn)
+case class AMPERSAND_AMPERSAND(tkn: Token)   extends Leaf with Terminal(tkn)
 // TODO: add other symbols to IR
 
 // keyword
@@ -172,9 +173,10 @@ case class MULTIPLY(left: ParsingTree, op: Terminal, right: ParsingTree)  extend
 case class DIV(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 case class MOD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 
-case class LEFT_SHIFT(left: ParsingTree, op: Terminal, right: ParsingTree)      extends BinaryExpression(left, op, right)
-
+case class LEFT_SHIFT(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
 case class RIGHT_SHIFT(left: ParsingTree, op: Terminal, right: ParsingTree) extends BinaryExpression(left, op, right)
+
+case class AND(left: ParsingTree, op: Terminal, right: ParsingTree)         extends BinaryExpression(left, op, right)
 
 object BinaryExpression {
   def apply(left: ParsingTree, op: Terminal, right: ParsingTree): BinaryExpression = {
@@ -186,6 +188,7 @@ object BinaryExpression {
       case t: PERCENT     => MOD(left, op, right)
       case t: LEFT_LEFT   => LEFT_SHIFT(left, op, right)
       case t: RIGHT_RIGHT => RIGHT_SHIFT(left, op, right)
+      case t: AMPERSAND_AMPERSAND => AND(left, op, right)
   }
 }
 
@@ -255,6 +258,8 @@ case object OPEN_BRACKET  extends Symbol
 case object CLOSE_BRACKET extends Symbol
 case object LEFT_LEFT     extends Symbol
 case object RIGHT_RIGHT   extends Symbol
+
+case object  AMPERSAND_AMPERSAND extends Symbol
 // TODO: add all Symbols
 
 // TODO: Do i really need hierachy for built-in's???
@@ -284,5 +289,6 @@ object Symbol {
 
       case "<<" => LEFT_LEFT
       case ">>" => RIGHT_RIGHT
+      case "&&" =>  AMPERSAND_AMPERSAND
   }
 }

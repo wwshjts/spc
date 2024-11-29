@@ -64,6 +64,7 @@ object Grammar {
   def u_plus: Parser[UPlus]             = ("+" ~ unary) ^^ (p => UPlus(p._1, p._2))
   def bitwiseNot: Parser[BitwiseNot]    = ("~" ~ unary) ^^ (p => BitwiseNot(p._1, p._2))
 
+  // TODO: use *? instead of **
   // **** Priority 2 ****
   def factor: Parser[Expression] = (unary ~ **(("*" <|> "/") ~ unary) ^^ mkBinary) <|> unary
 
@@ -74,7 +75,7 @@ object Grammar {
   def shift: Parser[Expression] = (term ~ **(("<<" <|> ">>")  ~ term) ^^ mkBinary) <|> term
 
   // **** Priority 5 ****
-
+  def and: Parser[Expression] = (shift ~ **("&&" ~ shift) ^^ mkBinary) <|> shift
 
   def expression: Parser[Expression] = term
   // **********
