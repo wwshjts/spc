@@ -126,6 +126,8 @@ case class OPEN_PAREN(tkn: Token)     extends Leaf with Terminal(tkn)
 case class CLOSE_PAREN(tkn: Token)    extends Leaf with Terminal(tkn)
 case class OPEN_BRACKET(tkn: Token)   extends Leaf with Terminal(tkn)
 case class CLOSE_BRACKET(tkn: Token)  extends Leaf with Terminal(tkn)
+case class LEFT_LEFT(tkn: Token)      extends Leaf with Terminal(tkn)
+case class RIGHT_RIGHT(tkn: Token)    extends Leaf with Terminal(tkn)
 // TODO: add other symbols to IR
 
 // keyword
@@ -146,7 +148,6 @@ case class Negate(operation: Terminal, operand: ParsingTree)       extends Unary
 case class UPlus(operation: Terminal, operand: ParsingTree)        extends UnaryExpr(operation, operand)
 case class BitwiseNot(operation: Terminal, operand: ParsingTree)   extends UnaryExpr(operation, operand)
 
-
 case class StringLiteral(op: Terminal)          extends LiteralExpr(op)
 case class IntegerLiteral(op: Terminal)         extends LiteralExpr(op)
 case class RuneLiteral(op: Terminal)            extends LiteralExpr(op)
@@ -163,6 +164,7 @@ case class Index(indexed: ParsingTree, l: Terminal, index: ParsingTree, r: Termi
 case class Invoke(i: ParsingTree, lp: Terminal, list: SeparatedList, rp: Terminal)    extends VarargBranch(i, lp, list, rp) with Primary
 
 abstract class BinaryExpression(left: ParsingTree, op: Terminal, right: ParsingTree) extends TernaryBranch(left, op, right) with Expression {}
+
 case class ADD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 case class SUBTRACT(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
 
@@ -170,14 +172,20 @@ case class MULTIPLY(left: ParsingTree, op: Terminal, right: ParsingTree)  extend
 case class DIV(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 case class MOD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 
+case class LEFT_SHIFT(left: ParsingTree, op: Terminal, right: ParsingTree)      extends BinaryExpression(left, op, right)
+
+case class RIGHT_SHIFT(left: ParsingTree, op: Terminal, right: ParsingTree) extends BinaryExpression(left, op, right)
+
 object BinaryExpression {
   def apply(left: ParsingTree, op: Terminal, right: ParsingTree): BinaryExpression = {
     op match
-      case t: PLUS      => ADD(left, op, right)
-      case t: MINUS     => SUBTRACT(left, op, right)
-      case t: ASTERISK  => MULTIPLY(left, op, right)
-      case t: SLASH     => DIV(left, op, right)
-      case t: PERCENT   => MOD(left, op, right)
+      case t: PLUS        => ADD(left, op, right)
+      case t: MINUS       => SUBTRACT(left, op, right)
+      case t: ASTERISK    => MULTIPLY(left, op, right)
+      case t: SLASH       => DIV(left, op, right)
+      case t: PERCENT     => MOD(left, op, right)
+      case t: LEFT_LEFT   => LEFT_SHIFT(left, op, right)
+      case t: RIGHT_RIGHT => RIGHT_SHIFT(left, op, right)
   }
 }
 
@@ -245,6 +253,8 @@ case object OPEN_PAREN    extends Symbol
 case object CLOSE_PAREN   extends Symbol
 case object OPEN_BRACKET  extends Symbol
 case object CLOSE_BRACKET extends Symbol
+case object LEFT_LEFT     extends Symbol
+case object RIGHT_RIGHT   extends Symbol
 // TODO: add all Symbols
 
 // TODO: Do i really need hierachy for built-in's???
@@ -271,5 +281,8 @@ object Symbol {
       case ")" => CLOSE_PAREN
       case "[" => OPEN_BRACKET
       case "]" => CLOSE_BRACKET
+
+      case "<<" => LEFT_LEFT
+      case ">>" => RIGHT_RIGHT
   }
 }

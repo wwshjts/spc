@@ -13,14 +13,19 @@ import scala.collection.mutable.ListBuffer
 
 sealed trait Result[+A] {
   def map[U](f: A => U): Result[U]
+  def get: A
 }
 
 case class Success[+A](result: A, remain_input: List[Token]) extends Result[A] {
   override def map[U](f: A => U): Result[U] = Success(f(result), remain_input)
+
+  override def get: A = result
 }
 
 case class Failure(msg: Predef.String) extends Result[Nothing] {
   override def map[U](f: Nothing => U): Result[U] = Failure(msg)
+
+  override def get: Nothing = ???
 }
 
 /*

@@ -1,18 +1,22 @@
 package org.syspro.spc
 package parser.token
 
-import org.syspro.spc.parser.parsing_tree.{BAD, ParsingTree, Symbol, DSLEntity, Terminal}
+import org.syspro.spc.parser.parsing_tree.{BAD, DSLEntity, ParsingTree, Symbol, Terminal}
 import org.syspro.spc.parser.parsing_tree
 import syspro.tm.lexer
-import syspro.tm.lexer.{Keyword, Token}
+import syspro.tm.lexer.{IdentifierToken, Keyword, KeywordToken, Token}
 import syspro.tm.parser.SyntaxKind
 
 object SyntaxKindConverter {
   def apply(token: Token): DSLEntity = {
-    token.toSyntaxKind match
-      case kw: Keyword => keyword(kw)
-      case sym: lexer.Symbol => symbol(sym)
-      case knd: SyntaxKind => kind(knd)
+    // I have one 'soft' keyword here, in DSL is really important t
+    if (token.toSyntaxKind == SyntaxKind.IDENTIFIER && token.asInstanceOf[IdentifierToken].contextualKeyword != null)
+      parsing_tree.NULL
+    else
+      token.toSyntaxKind match
+        case kw: Keyword => keyword(kw)
+        case sym: lexer.Symbol => symbol(sym)
+        case knd: SyntaxKind => kind(knd)
   }
 
   def keyword(kw: Keyword): DSLEntity = {
@@ -129,8 +133,8 @@ object SyntaxKindConverter {
     case lexer.Symbol.LESS_THAN_EQUALS => ???
     case lexer.Symbol.GREATER_THAN => ???
     case lexer.Symbol.GREATER_THAN_EQUALS => ???
-    case lexer.Symbol.LESS_THAN_LESS_THAN => ???
-    case lexer.Symbol.GREATER_THAN_GREATER_THAN => ???
+    case lexer.Symbol.LESS_THAN_LESS_THAN => parsing_tree.LEFT_LEFT
+    case lexer.Symbol.GREATER_THAN_GREATER_THAN => parsing_tree.RIGHT_RIGHT
     case lexer.Symbol.OPEN_BRACKET => parsing_tree.OPEN_BRACKET
     case lexer.Symbol.CLOSE_BRACKET => parsing_tree.CLOSE_BRACKET
     case lexer.Symbol.OPEN_PAREN => parsing_tree.OPEN_PAREN
