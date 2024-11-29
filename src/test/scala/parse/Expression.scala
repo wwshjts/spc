@@ -5,7 +5,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.syspro.spc.lexer.Lexer
 import parser.parsing_tree.*
 
-import org.syspro.spc.parser.grammar.Grammar.{and, expression, shift}
+import org.syspro.spc.parser.grammar.Grammar.{and, bitwiseAnd, bitwiseOr, expression, shift, xor}
 import org.syspro.spc.parser.grammar.Success
 
 // import org.syspro.spc.parser.parsing_tree.{INTEGER, IntegerLiteral, LEFT_SHIFT, RIGHT_SHIFT, RIGHT_RIGHT}
@@ -43,6 +43,85 @@ class Expression extends AnyFunSuite {
           RIGHT_RIGHT(input(5)),
           IntegerLiteral(INTEGER(input(6)))),
         List())
+
+    assertResult(expected)(res)
+  }
+
+  test("bitwise and") {
+    val input = Lexer("1 & 2")
+    val res = bitwiseAnd(input)
+
+    val expected =
+      Success(
+        BitwiseAnd(
+          IntegerLiteral(INTEGER(input.head)),
+          AMPERSAND(input(1)),
+          IntegerLiteral(INTEGER(input(2)))
+        ),
+      List())
+
+    assertResult(expected)(res)
+  }
+
+  test("bitwise and priority") {
+    val input = Lexer("1 & 2 - 3")
+    val res = bitwiseAnd(input)
+
+    val expected =
+      Success(
+        BitwiseAnd(
+          IntegerLiteral(INTEGER(input.head)),
+          AMPERSAND(input(1)),
+          SUBTRACT(
+            IntegerLiteral(INTEGER(input(2))),
+            MINUS(input(3)),
+            IntegerLiteral(INTEGER(input(4)))
+          )
+        ),List())
+
+    assertResult(expected)(res)
+  }
+
+  test("xor") {
+    val input = Lexer("1 & 2 ^ 3")
+    val res = xor(input)
+
+    val expected =
+      Success(
+        Xor(
+          BitwiseAnd(
+            IntegerLiteral(INTEGER(input.head)),
+            AMPERSAND(input(1)),
+            IntegerLiteral(INTEGER(input(2)))
+          ),
+          CARET(input(3)),
+          IntegerLiteral(INTEGER(input(4)))
+        ),List()
+      )
+
+    assertResult(expected)(res)
+  }
+
+  test("or") {
+    val input = Lexer("1 & 2 | 3 ^ 4")
+    val res = bitwiseOr(input)
+
+    val expected =
+      Success(
+        BitwiseOr(
+          BitwiseAnd(
+            IntegerLiteral(INTEGER(input.head)),
+            AMPERSAND(input(1)),
+            IntegerLiteral(INTEGER(input(2)))
+          ),
+          BAR(input(3)),
+          Xor(
+            IntegerLiteral(INTEGER(input(4))),
+            CARET(input(5)),
+            IntegerLiteral(INTEGER(input(6)))
+          )
+        ),List()
+      )
 
     assertResult(expected)(res)
   }

@@ -75,9 +75,18 @@ object Grammar {
   def shift: Parser[Expression] = (term ~ **(("<<" <|> ">>")  ~ term) ^^ mkBinary) <|> term
 
   // **** Priority 5 ****
+  def bitwiseAnd: Parser[Expression] = ((shift ~ **("&" ~ shift)) ^^ mkBinary) <|> shift
+
+  // **** Priority 6 ****
+  def xor: Parser[Expression] = ((bitwiseAnd ~ **("^" ~ bitwiseAnd)) ^^ mkBinary) <|> bitwiseAnd
+
+  // **** Priority 7 ****
+  def bitwiseOr: Parser[Expression] = (xor ~ **("|" ~ xor) ^^ mkBinary) <|> xor
+
+  // **** Priority 10 ****
   def and: Parser[Expression] = (shift ~ **("&&" ~ shift) ^^ mkBinary) <|> shift
 
-  def expression: Parser[Expression] = term
+  def expression: Parser[Expression] = xor
   // **********
 
   def mkBinary(repr: (Expression, ((Terminal, Expression), List[(Terminal, Expression)]))): Expression = {
