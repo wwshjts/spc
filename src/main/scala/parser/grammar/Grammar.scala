@@ -69,22 +69,22 @@ object Grammar {
   def factor: Parser[Expression] = unary ~ *?(("*" <|> "/") ~ unary) ^^ _mkBinary
 
   // **** Priority 3 ****
-  def term: Parser[Expression]   = (factor ~ **(("+" <|> "-" <|> "%") ~ factor) ^^ mkBinary) <|> factor
+  def term: Parser[Expression]   = factor ~ *?(("+" <|> "-" <|> "%") ~ factor) ^^ _mkBinary
 
   // **** Priority 4 ****
-  def shift: Parser[Expression] = (term ~ **(("<<" <|> ">>")  ~ term) ^^ mkBinary) <|> term
+  def shift: Parser[Expression] = term ~ *?(("<<" <|> ">>")  ~ term) ^^ _mkBinary
 
   // **** Priority 5 ****
-  def bitwiseAnd: Parser[Expression] = ((shift ~ **("&" ~ shift)) ^^ mkBinary) <|> shift
+  def bitwiseAnd: Parser[Expression] = shift ~ *?("&" ~ shift) ^^ _mkBinary
 
   // **** Priority 6 ****
-  def xor: Parser[Expression] = ((bitwiseAnd ~ **("^" ~ bitwiseAnd)) ^^ mkBinary) <|> bitwiseAnd
+  def xor: Parser[Expression] = bitwiseAnd ~ *?("^" ~ bitwiseAnd) ^^ _mkBinary
 
   // **** Priority 7 ****
-  def bitwiseOr: Parser[Expression] = (xor ~ **("|" ~ xor) ^^ mkBinary) <|> xor
+  def bitwiseOr: Parser[Expression] = xor ~ *?("|" ~ xor) ^^ _mkBinary
 
   // **** Priority 10 ****
-  def and: Parser[Expression] = (shift ~ **("&&" ~ shift) ^^ mkBinary) <|> shift
+  def and: Parser[Expression] = shift ~ *?("&&" ~ shift) ^^ _mkBinary
 
   def expression: Parser[Expression] = xor
   // **********
