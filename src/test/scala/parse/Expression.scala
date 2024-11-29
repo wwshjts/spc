@@ -5,7 +5,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.syspro.spc.lexer.Lexer
 import parser.parsing_tree.*
 
-import org.syspro.spc.parser.grammar.Grammar.{and, bitwiseAnd, bitwiseOr, expression, factor, shift, xor}
+import org.syspro.spc.parser.grammar.Grammar.{and, bitwiseAnd, bitwiseOr, expression, factor, shift, term, xor}
 import org.syspro.spc.parser.grammar.Success
 
 // import org.syspro.spc.parser.parsing_tree.{INTEGER, IntegerLiteral, LEFT_SHIFT, RIGHT_SHIFT, RIGHT_RIGHT}
@@ -33,6 +33,32 @@ class Expression extends AnyFunSuite {
           ASTERISK(input(5)),
           IntegerLiteral(INTEGER(input(6)))
         ), List()
+      )
+
+    assertResult(expected)(res)
+  }
+
+  test("term") {
+    val input = Lexer("1 + -2 * 3 - 4")
+    val res = term(input)
+
+    val expected =
+      Success(
+        SUBTRACT(
+          ADD(
+            IntegerLiteral(INTEGER(input(0))),
+            PLUS(input(1)),
+            MULTIPLY(
+              Negate(
+                MINUS(input(2)),
+                IntegerLiteral(INTEGER(input(3)))
+              ),
+              ASTERISK(input(4)),
+              IntegerLiteral(INTEGER(input(5))))
+          ),
+          MINUS(input(6)),
+          IntegerLiteral(INTEGER(input(7)))
+        ),List()
       )
 
     assertResult(expected)(res)
