@@ -2,6 +2,7 @@ package org.syspro.spc
 package parser.parsing_tree
 
 import org.syspro.spc.parser.parsing_tree
+import org.w3c.dom.css.Counter
 import syspro.tm.lexer.Token
 import syspro.tm.parser.{AnySyntaxKind, SyntaxKind, SyntaxNode}
 
@@ -67,6 +68,21 @@ abstract class VarargBranch(args: ParsingTree*) extends Branch {
   override def rank(): Int = args.size
 }
 
+abstract class ListVararg(args: List[ParsingTree]) extends Branch {
+  override def apply(index: Int): Option[ParsingTree] = if (args.isDefinedAt(index)) Some(args(index)) else None
+
+  override def rank(): Int = args.size
+}
+
+object VarargBranch {
+  def optionalVarargs(opt: Option[ParsingTree]*): Seq[ParsingTree] = opt.flatMap {
+    case Some(value) => Seq(value)
+    case None => Seq.empty
+  }
+
+}
+
+
 sealed trait Leaf extends Tree {
   override def apply(index: Int): Option[ParsingTree] = None
 
@@ -97,6 +113,8 @@ sealed trait Primary extends Expression
 sealed trait Name extends Primary
 
 sealed trait BinaryExpr extends Expression
+
+sealed trait Statement extends Grammar
 // ---------------------------------------------
 
 
@@ -134,6 +152,7 @@ case class BAR(tkn: Token)                    extends Leaf with Terminal(tkn)
 case class QUESTION(tkn: Token)               extends Leaf with Terminal(tkn)
 case class LEFT(tkn: Token)                   extends Leaf with Terminal(tkn)
 case class RIGHT(tkn: Token)                  extends Leaf with Terminal(tkn)
+case class EQ(tkn: Token)                     extends Leaf with Terminal(tkn)
 case class EQ_EQ(tkn: Token)                  extends Leaf with Terminal(tkn)
 case class EXCLAMATION(tkn: Token)            extends Leaf with Terminal(tkn)
 case class NEQ(tkn: Token)                    extends Leaf with Terminal(tkn)
@@ -150,9 +169,15 @@ case class THIS(tkn: Token)           extends Leaf with Terminal(tkn)
 case class SUPER(tkn: Token)          extends Leaf with Terminal(tkn)
 case class NULL(tkn: Token)           extends Leaf with Terminal(tkn)
 case class IS(tkn: Token)             extends Leaf with Terminal(tkn)
+case class FOR(tkn: Token)            extends Leaf with Terminal(tkn)
+case class WHILE(tkn: Token)          extends Leaf with Terminal(tkn)
+case class IF(tkn: Token)             extends Leaf with Terminal(tkn)
+case class ELSE(tkn: Token)           extends Leaf with Terminal(tkn)
+case class IN(tkn: Token)             extends Leaf with Terminal(tkn)
 
 // some real shit
-case class SeparatedList(node: ParsingTree*)  extends VarargBranch(node*) with Grammar
+case class SeparatedList(trees: ParsingTree*)     extends VarargBranch(trees*) with Grammar
+case class GrammarList(trees: List[ParsingTree])  extends ListVararg(trees) with Grammar
 
 abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Atom
 /**
@@ -216,7 +241,7 @@ case class Equal(left: ParsingTree, op: Terminal, right: ParsingTree)       exte
 case class NEqual(left: ParsingTree, op: Terminal, right: ParsingTree)      extends BinaryExpression(left, op, right)
 
 object BinaryExpression {
-  def apply(left: ParsingTree, op: Terminal, right: ParsingTree): BinaryExpression = {
+  def apply(left: ParsingTree, op: Terminal, right: ParsingTree): Expression = {
     op match
       case t: PLUS        => ADD(left, op, right)
       case t: MINUS       => SUBTRACT(left, op, right)
@@ -237,6 +262,38 @@ object BinaryExpression {
       case t: NEQ => NEqual(left, op, right)
       case t: LEFT_EQ => LessOrEq(left, op, right)
       case t: RIGHT_EQ => GreaterOrEq(left, op, right)
+  }
+}
+
+// Statements
+case class Assignment(left: Primary, op: Terminal, right: Expression) extends VarargBranch(left, op, right) with Statement
+
+case class ForStmt private (args: List[ParsingTree]) extends ListVararg(args) with Statement
+object ForStmt {
+
+  def apply(fr: Terminal, counter: Primary, in: Terminal, expr: Expression,
+            indent_op: Option[Terminal], grammarList_opt: Option[GrammarList], dedent_opt: Option[Terminal]): Statement = {
+
+    val s: List[ParsingTree] = fr :: counter :: in :: expr :: Nil
+    val opts: List[ParsingTree] = (indent_op :: grammarList_opt :: dedent_opt :: Nil).flatMap(f => f match
+      case Some(value) => List(value)
+      case None => List.empty)
+
+    new ForStmt(s ::: opts)
+  }
+}
+
+case class WhileStmt(args: List[ParsingTree]) extends ListVararg(args) with Statement
+object WhileStmt {
+  def apply(wle: Terminal, expr: Expression,
+            indent_op: Option[Terminal], grammarList_opt: Option[GrammarList], dedent_opt: Option[Terminal]): Statement = {
+
+    val s: List[ParsingTree] = wle :: expr :: Nil
+    val opts: List[ParsingTree] = (indent_op :: grammarList_opt :: dedent_opt :: Nil).flatMap(f => f match
+      case Some(value) => List(value)
+      case None => List.empty)
+
+    new WhileStmt(s ::: opts)
   }
 }
 
@@ -286,6 +343,11 @@ case object THIS          extends DSLEntity { override def apply(tkn: Token): Te
 case object SUPER         extends DSLEntity { override def apply(tkn: Token): Terminal = new SUPER(tkn) }
 case object IS            extends DSLEntity { override def apply(tkn: Token): Terminal = new IS(tkn) }
 case object NULL          extends DSLEntity { override def apply(tkn: Token): Terminal = new NULL(tkn) }
+case object FOR           extends DSLEntity { override def apply(tkn: Token): Terminal = new FOR(tkn) }
+case object WHILE         extends DSLEntity { override def apply(tkn: Token): Terminal = new WHILE(tkn) }
+case object IF            extends DSLEntity { override def apply(tkn: Token): Terminal = new IF(tkn) }
+case object ELSE          extends DSLEntity { override def apply(tkn: Token): Terminal = new ELSE(tkn) }
+case object IN            extends DSLEntity { override def apply(tkn: Token): Terminal = new IN(tkn) }
 
 sealed trait Symbol       extends DSLEntity
 case object DOT           extends Symbol
@@ -307,6 +369,7 @@ case object QUESTION      extends Symbol
 case object LEFT          extends Symbol
 case object RIGHT         extends Symbol
 case object EXCLAMATION   extends Symbol
+case object EQ            extends Symbol
 case object NEQ           extends Symbol
 case object EQ_EQ         extends Symbol
 case object LEFT_EQ       extends Symbol
@@ -350,6 +413,7 @@ object Symbol {
       case ">" => RIGHT
       case "?" => QUESTION
       case "!" => EXCLAMATION
+      case "=" => EQ
 
       case "==" => EQ_EQ
       case "!=" => NEQ

@@ -48,9 +48,10 @@ object Grammar {
       SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
     )
 
+  def list_stmt: Parser[GrammarList] = |**(statement) ^^ GrammarList
+
   def atom: Parser[Primary] = integer <|> string <|> bool <|> rune <|> this_expr
                                             <|> super_expr <|> null_lit <|> name
-
 
   // **** Priority 0 ****
   //def primary:Parser[Primary] =  invoke <|> index_expr <|> memberAccess <|> group <|> atom
@@ -140,7 +141,20 @@ object Grammar {
   def or: Parser[Expression] = and ~ *?("||" ~ and) ^^ _mkBinary
 
   def expression: Parser[Expression] = or
-  // **********
+  // **** Statements ****
+
+  def loop_for: Parser[Statement] = FOR ~ primary ~ IN ~ expression ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ ( parsed =>
+    val ((((((fr, primary), in), expr), ident_opt), list_opt), dedent_opt) = parsed
+
+    ForStmt(fr, primary, in, expr, ident_opt, list_opt, dedent_opt)
+  )
+
+  def assignment: Parser[Statement] = primary ~ "=" ~ expression ^^ (parsed =>
+    val ((l, eq), r) = parsed
+    Assignment(l, eq, r)
+  )
+
+  def statement: Parser[Statement] = loop_for <|> assignment
 
   def _mkBinary(repr: (Expression, List[(Terminal, Expression)])): Expression = {
     val (left, kleene_star) = repr
