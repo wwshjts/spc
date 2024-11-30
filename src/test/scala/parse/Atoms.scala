@@ -128,6 +128,44 @@ class Atoms extends AnyFunSuite {
     assertResult(expected)(res)
   }
 
+  test("generic name") {
+    val input = Lexer("f<A, B, C>")
+    val res = expression(input)
+
+    val expected =
+      Success(
+        GenericName(
+          IDENTIFIER(input(0)),
+          LEFT(input(1)),
+          SeparatedList(
+            IdentifierName(IDENTIFIER(input(2))),
+            COMMA(input(3)),
+            IdentifierName(IDENTIFIER(input(4))),
+            COMMA(input(5)),
+            IdentifierName(IDENTIFIER(input(6)))
+          ),
+          RIGHT(input(7))
+        ),List()
+      )
+
+    assertResult(expected)(res)
+  }
+
+  test("question") {
+    val input = Lexer("? data")
+    val res = expression(input)
+
+    val expected =
+      Success(
+        OptionName(
+          QUESTION(input(0)),
+          IdentifierName(IDENTIFIER(input(1)))
+        ),List()
+      )
+
+    assertResult(expected)(res)
+  }
+
   test("tricky") {
     val input = Lexer("Term.repeated(token).count")
     val res = expression(input)

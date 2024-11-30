@@ -25,15 +25,31 @@ object Grammar {
   def null_i: Parser[IdentifierName]    = NULL ^^ IdentifierName
   def this_expr: Parser[ThisExpr]       = THIS ^^ ThisExpr
   def super_expr: Parser[SuperExpr]     = SUPER ^^ SuperExpr
-  def identif: Parser[IdentifierName]   = IDENTIFIER ^^ IdentifierName
+
+  // Name expressions
+  def name: Parser[Name] =  option_name <|> generic_name <|> identifier_name
+  def identifier_name: Parser[IdentifierName]   = IDENTIFIER ^^ IdentifierName
+  def option_name: Parser[OptionName]           = "?" ~ name ^^ ( parsed =>
+    val (q, name) = parsed
+    OptionName(q, name)
+  )
+  def generic_name: Parser[GenericName]         = IDENTIFIER ~ "<" ~ separatedList_name_comma ~ ">" ^^ (parsed =>
+    val (((i, lt), sep), gt) = parsed
+    GenericName(i, lt, sep, gt)
+  )
 
   def separatedList_expr_comma: Parser[SeparatedList] = (*?(expression ~ ",")) ~ expression ^^ (parsed =>
       val (list, expr) = parsed
       SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
     )
 
-  def atom: Parser[Atom] = integer <|> string <|> bool <|> rune <|> this_expr
-                                            <|> super_expr <|> null_lit <|> identif
+  def separatedList_name_comma: Parser[SeparatedList] = (*?(name ~ ",")) ~ name ^^ (parsed =>
+      val (list, expr) = parsed
+      SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
+    )
+
+  def atom: Parser[Primary] = integer <|> string <|> bool <|> rune <|> this_expr
+                                            <|> super_expr <|> null_lit <|> name
 
 
   // **** Priority 0 ****
@@ -97,6 +113,7 @@ object Grammar {
   def bitwiseOr: Parser[Expression] = xor ~ *?("|" ~ xor) ^^ _mkBinary
 
   // **** Priority 8 ****
+  // TODO: is expression
   def comparsion: Parser[Expression] = bitwiseOr ~ *?(("<" <|> "<=" <|> ">" <|> ">=" <|> "==" <|> "!=") ~ bitwiseOr) ^^ _mkBinary
 
   // **** Priority 10 ****

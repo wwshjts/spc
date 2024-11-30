@@ -139,10 +139,10 @@ object SyntaxKindConverter {
     case lexer.Symbol.CLOSE_BRACKET => parsing_tree.CLOSE_BRACKET
     case lexer.Symbol.OPEN_PAREN => parsing_tree.OPEN_PAREN
     case lexer.Symbol.CLOSE_PAREN => parsing_tree.CLOSE_PAREN
-    case lexer.Symbol.EQUALS =>  ??? 
+    case lexer.Symbol.EQUALS =>  ???
     case lexer.Symbol.EQUALS_EQUALS => parsing_tree.EQ_EQ
     case lexer.Symbol.EXCLAMATION_EQUALS => parsing_tree.NEQ
-    case lexer.Symbol.QUESTION => ???
+    case lexer.Symbol.QUESTION => parsing_tree.QUESTION
     case lexer.Symbol.BOUND => ???
     case lexer.Symbol.DOT => parsing_tree.DOT
   }

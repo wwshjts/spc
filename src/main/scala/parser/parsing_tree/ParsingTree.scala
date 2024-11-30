@@ -94,6 +94,8 @@ sealed trait Atom extends Primary
 
 sealed trait Primary extends Expression
 
+sealed trait Name extends Primary
+
 sealed trait BinaryExpr extends Expression
 // ---------------------------------------------
 
@@ -129,6 +131,7 @@ case class CLOSE_BRACKET(tkn: Token)          extends Leaf with Terminal(tkn)
 case class AMPERSAND(tkn: Token)              extends Leaf with Terminal(tkn)
 case class CARET(tkn: Token)                  extends Leaf with Terminal(tkn)
 case class BAR(tkn: Token)                    extends Leaf with Terminal(tkn)
+case class QUESTION(tkn: Token)               extends Leaf with Terminal(tkn)
 case class LEFT(tkn: Token)                   extends Leaf with Terminal(tkn)
 case class RIGHT(tkn: Token)                  extends Leaf with Terminal(tkn)
 case class EQ_EQ(tkn: Token)                  extends Leaf with Terminal(tkn)
@@ -144,6 +147,7 @@ case class AMPERSAND_AMPERSAND(tkn: Token)    extends Leaf with Terminal(tkn)
 case class THIS(tkn: Token)           extends Leaf with Terminal(tkn)
 case class SUPER(tkn: Token)          extends Leaf with Terminal(tkn)
 case class NULL(tkn: Token)           extends Leaf with Terminal(tkn)
+case class IS(tkn: Token)             extends Leaf with Terminal(tkn)
 
 // some real shit
 case class SeparatedList(node: ParsingTree*)  extends VarargBranch(node*) with Grammar
@@ -166,7 +170,10 @@ case class BooleanLiteral(op: Terminal)         extends LiteralExpr(op)
 case class ThisExpr(op: Terminal)               extends LiteralExpr(op)
 case class SuperExpr(op: Terminal)              extends LiteralExpr(op)
 case class NullLiteral(op: Terminal)            extends LiteralExpr(op)
-case class IdentifierName(op: Terminal)         extends LiteralExpr(op)
+
+case class IdentifierName(op: Terminal)                 extends UnaryBranch(op) with Name
+case class OptionName(op: Terminal, name: ParsingTree)  extends BinaryBranch(op, name) with Name
+case class GenericName(i: Terminal, l: Terminal, separatedList: SeparatedList, r: Terminal) extends VarargBranch(i, l, separatedList, r) with Name
 
 case class GroupBy(leftb: Terminal, expr: ParsingTree, rightb: Terminal)              extends TernaryBranch(leftb, expr, rightb) with Primary
 case class MemberAccess(left: ParsingTree, dot: Terminal, i: Terminal)                extends TernaryBranch(left, dot, i) with Primary
@@ -265,6 +272,7 @@ case object BAD           extends DSLEntity { override def apply(tkn: Token): Te
 // Keyword
 case object THIS          extends DSLEntity { override def apply(tkn: Token): Terminal = new THIS(tkn) }
 case object SUPER         extends DSLEntity { override def apply(tkn: Token): Terminal = new SUPER(tkn) }
+case object IS            extends DSLEntity { override def apply(tkn: Token): Terminal = new IS(tkn) }
 case object NULL          extends DSLEntity { override def apply(tkn: Token): Terminal = new NULL(tkn) }
 
 sealed trait Symbol       extends DSLEntity
@@ -283,10 +291,11 @@ case object OPEN_BRACKET  extends Symbol
 case object AMPERSAND     extends Symbol
 case object CARET         extends Symbol
 case object BAR           extends Symbol
+case object QUESTION      extends Symbol
 case object LEFT          extends Symbol
 case object RIGHT         extends Symbol
-case object EQ_EQ         extends Symbol
 case object NEQ           extends Symbol
+case object EQ_EQ         extends Symbol
 case object LEFT_EQ       extends Symbol
 case object RIGHT_EQ      extends Symbol
 case object CLOSE_BRACKET extends Symbol
@@ -325,6 +334,7 @@ object Symbol {
       case "|" => BAR
       case "<" => LEFT
       case ">" => RIGHT
+      case "?" => QUESTION
 
       case "==" => EQ_EQ
       case "!=" => NEQ
