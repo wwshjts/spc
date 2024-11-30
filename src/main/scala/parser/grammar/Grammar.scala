@@ -53,6 +53,7 @@ object Grammar {
         case List() => left
         case head :: tail =>
           val first = head(left)
+
           tail.foldLeft(first)((left, container) => container(left))
       }
     )
@@ -121,17 +122,17 @@ object Grammar {
   }
 
   sealed trait PrimaryContainer {
-    def apply(expr: Primary): Primary = {
+    def apply(left: Primary): Primary = {
       this match
-        case MemberAccessContainer(dot, i) => MemberAccess(expr, dot, i)
-        case IndexExprContainer(lb, expr, rb) => Index(expr, lb, expr, rb)
-        case InvokeContainer(lb, sep_list, rb) => Invoke(expr, lb, sep_list, rb)
+        case MemberAccessContainer(dot, i) => MemberAccess(left, dot, i)
+        case IndexExprContainer(lb, expr, rb) => Index(left, lb, expr, rb)
+        case InvokeContainer(lb, sep_list, rb) => Invoke(left, lb, sep_list, rb)
     }
   }
 
-  case class MemberAccessContainer(dot: Terminal, i: Terminal) extends PrimaryContainer
+  case class MemberAccessContainer(dot: Terminal, i: Terminal)                    extends PrimaryContainer
 
-  case class IndexExprContainer(lb: Terminal, expr: Expression, rb: Terminal) extends PrimaryContainer
+  case class IndexExprContainer(lb: Terminal, expr: Expression, rb: Terminal)     extends PrimaryContainer
 
   case class InvokeContainer(lb: Terminal, sep_list: SeparatedList, rb: Terminal) extends PrimaryContainer
 

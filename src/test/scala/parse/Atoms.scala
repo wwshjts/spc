@@ -23,8 +23,61 @@ class Atoms extends AnyFunSuite {
     println(input.head.toSyntaxKind)
   }
 
+  test("GroupBy") {
+    val input = Lexer("(a + b) * 3")
+    val res = expression(input)
+
+    val expected =
+      Success(
+        MULTIPLY(
+          GroupBy(
+            OPEN_PAREN(input(0)),
+            ADD(
+              IdentifierName(IDENTIFIER(input(1))),
+              PLUS(input(2)),
+              IdentifierName(IDENTIFIER(input(3)))
+            ),
+            CLOSE_PAREN(input(4))
+          ),
+          ASTERISK(input(5)),
+          IntegerLiteral(INTEGER(input(6)))
+        ),
+        List()
+      )
+
+    assertResult(expected)(res)
+  }
+
+  test("member_access") {
+    val input = Lexer("token.start.get_line")
+    val res = expression(input)
+
+    val expected =
+      Success(
+        MemberAccess(
+          MemberAccess(
+            IdentifierName(IDENTIFIER(input(0))),
+            DOT(input(1)),
+            IDENTIFIER(input(2))
+          ),
+          DOT(input(3)),
+          IDENTIFIER(input(4))
+        ),
+        List()
+      )
+
+    assertResult(expected)(res)
+
+
+  }
+  test("index expression") {
+    val input = Lexer("set[2]")
+    val res = expression(input)
+
+    println(res)
+  }
+
   test("tricky") {
-    // MemberAccess((Invoke(MemberAccess(
     val input = Lexer("Term.repeated(token).count")
     val res = expression(input)
 
