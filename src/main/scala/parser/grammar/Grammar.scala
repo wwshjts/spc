@@ -77,20 +77,45 @@ object Grammar {
   def u_plus: Parser[UPlus]             = ("+" ~ unary) ^^ (p => UPlus(p._1, p._2))
   def bitwiseNot: Parser[BitwiseNot]    = ("~" ~ unary) ^^ (p => BitwiseNot(p._1, p._2))
 
+  // TODO: use *? instead of **
   // **** Priority 2 ****
-  def factor: Parser[Expression] = (unary ~ **(("*" <|> "/") ~ unary) ^^ mkBinary) <|> unary
+  def factor: Parser[Expression] = unary ~ *?(("*" <|> "/") ~ unary) ^^ _mkBinary
 
   // **** Priority 3 ****
-  def term: Parser[Expression]   = (factor ~ **(("+" <|> "-" <|> "%") ~ factor) ^^ mkBinary) <|> factor
+  def term: Parser[Expression]   = factor ~ *?(("+" <|> "-" <|> "%") ~ factor) ^^ _mkBinary
 
   // **** Priority 4 ****
-  def shift: Parser[Expression] = (term ~ **(("<<" <|> ">>")  ~ term) ^^ mkBinary) <|> term
+  def shift: Parser[Expression] = term ~ *?(("<<" <|> ">>")  ~ term) ^^ _mkBinary
 
   // **** Priority 5 ****
+  def bitwiseAnd: Parser[Expression] = shift ~ *?("&" ~ shift) ^^ _mkBinary
 
+  // **** Priority 6 ****
+  def xor: Parser[Expression] = bitwiseAnd ~ *?("^" ~ bitwiseAnd) ^^ _mkBinary
 
-  def expression: Parser[Expression] = term
+  // **** Priority 7 ****
+  def bitwiseOr: Parser[Expression] = xor ~ *?("|" ~ xor) ^^ _mkBinary
+
+  // **** Priority 10 ****
+  def and: Parser[Expression] = shift ~ *?("&&" ~ shift) ^^ _mkBinary
+
+  def expression: Parser[Expression] = xor
   // **********
+
+  def _mkBinary(repr: (Expression, List[(Terminal, Expression)])): Expression = {
+    val (left, kleene_star) = repr
+
+    kleene_star match
+      case List() => left // if kleene star combinator matches nothing the empty List is returned
+      case head :: tail => {
+        val (op, right) = head
+        val first = BinaryExpression(left, op, right)
+        tail.foldLeft(first)((left, term) =>
+          val (op, right) = term
+          BinaryExpression(left, op, right)
+        )
+      }
+  }
 
   def mkBinary(repr: (Expression, ((Terminal, Expression), List[(Terminal, Expression)]))): Expression = {
     val (left, ((op, right), tail)) = repr

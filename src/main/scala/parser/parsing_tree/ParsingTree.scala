@@ -113,21 +113,25 @@ case class INTEGER(tkn: Token)      extends Leaf with Terminal(tkn)
 case class STRING(tkn: Token)       extends Leaf with Terminal(tkn)
 
 // Symbols
-case class DOT(tkn: Token)            extends Leaf with Terminal(tkn)
-case class COLON(tkn: Token)          extends Leaf with Terminal(tkn)
-case class COMMA(tkn: Token)          extends Leaf with Terminal(tkn)
-case class PLUS(tkn: Token)           extends Leaf with Terminal(tkn)
-case class MINUS(tkn: Token)          extends Leaf with Terminal(tkn)
-case class ASTERISK(tkn: Token)       extends Leaf with Terminal(tkn)
-case class SLASH(tkn: Token)          extends Leaf with Terminal(tkn)
-case class TILDE(tkn: Token)          extends Leaf with Terminal(tkn)
-case class PERCENT(tkn: Token)        extends Leaf with Terminal(tkn)
-case class OPEN_PAREN(tkn: Token)     extends Leaf with Terminal(tkn)
-case class CLOSE_PAREN(tkn: Token)    extends Leaf with Terminal(tkn)
-case class OPEN_BRACKET(tkn: Token)   extends Leaf with Terminal(tkn)
-case class CLOSE_BRACKET(tkn: Token)  extends Leaf with Terminal(tkn)
-case class LEFT_LEFT(tkn: Token)      extends Leaf with Terminal(tkn)
-case class RIGHT_RIGHT(tkn: Token)    extends Leaf with Terminal(tkn)
+case class DOT(tkn: Token)                   extends Leaf with Terminal(tkn)
+case class COLON(tkn: Token)                 extends Leaf with Terminal(tkn)
+case class COMMA(tkn: Token)                 extends Leaf with Terminal(tkn)
+case class PLUS(tkn: Token)                  extends Leaf with Terminal(tkn)
+case class MINUS(tkn: Token)                 extends Leaf with Terminal(tkn)
+case class ASTERISK(tkn: Token)              extends Leaf with Terminal(tkn)
+case class SLASH(tkn: Token)                 extends Leaf with Terminal(tkn)
+case class TILDE(tkn: Token)                 extends Leaf with Terminal(tkn)
+case class PERCENT(tkn: Token)               extends Leaf with Terminal(tkn)
+case class OPEN_PAREN(tkn: Token)            extends Leaf with Terminal(tkn)
+case class CLOSE_PAREN(tkn: Token)           extends Leaf with Terminal(tkn)
+case class OPEN_BRACKET(tkn: Token)          extends Leaf with Terminal(tkn)
+case class CLOSE_BRACKET(tkn: Token)         extends Leaf with Terminal(tkn)
+case class AMPERSAND(tkn: Token)             extends Leaf with Terminal(tkn)
+case class CARET(tkn: Token)                 extends Leaf with Terminal(tkn)
+case class BAR(tkn: Token)                   extends Leaf with Terminal(tkn)
+case class LEFT_LEFT(tkn: Token)             extends Leaf with Terminal(tkn)
+case class RIGHT_RIGHT(tkn: Token)           extends Leaf with Terminal(tkn)
+case class AMPERSAND_AMPERSAND(tkn: Token)   extends Leaf with Terminal(tkn)
 // TODO: add other symbols to IR
 
 // keyword
@@ -172,9 +176,13 @@ case class MULTIPLY(left: ParsingTree, op: Terminal, right: ParsingTree)  extend
 case class DIV(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 case class MOD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 
-case class LEFT_SHIFT(left: ParsingTree, op: Terminal, right: ParsingTree)      extends BinaryExpression(left, op, right)
-
+case class LEFT_SHIFT(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
 case class RIGHT_SHIFT(left: ParsingTree, op: Terminal, right: ParsingTree) extends BinaryExpression(left, op, right)
+
+case class BitwiseAnd(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
+case class BitwiseOr(left: ParsingTree, op: Terminal, right: ParsingTree)   extends BinaryExpression(left, op, right)
+case class Xor(left: ParsingTree, op: Terminal, right: ParsingTree)         extends BinaryExpression(left, op, right)
+case class AND(left: ParsingTree, op: Terminal, right: ParsingTree)         extends BinaryExpression(left, op, right)
 
 object BinaryExpression {
   def apply(left: ParsingTree, op: Terminal, right: ParsingTree): BinaryExpression = {
@@ -184,8 +192,12 @@ object BinaryExpression {
       case t: ASTERISK    => MULTIPLY(left, op, right)
       case t: SLASH       => DIV(left, op, right)
       case t: PERCENT     => MOD(left, op, right)
+      case t: AMPERSAND   => BitwiseAnd(left, op, right)
       case t: LEFT_LEFT   => LEFT_SHIFT(left, op, right)
       case t: RIGHT_RIGHT => RIGHT_SHIFT(left, op, right)
+      case t: AMPERSAND_AMPERSAND => AND(left, op, right)
+      case t: CARET => Xor(left, op, right)
+      case t: BAR => BitwiseOr(left, op, right)
   }
 }
 
@@ -225,13 +237,9 @@ trait DSLEntity {
 }
 
 case object INDENT        extends DSLEntity { override def apply(tkn: Token): Terminal = new INDENT(tkn) }
-
 case object DEDENT        extends DSLEntity { override def apply(tkn: Token): Terminal = new DEDENT(tkn) }
-
 case object RUNE          extends DSLEntity { override def apply(tkn: Token): Terminal = new RUNE(tkn) }
-
 case object IDENTIFIER    extends DSLEntity { override def apply(tkn: Token): Terminal = new IDENTIFIER(tkn) }
-
 case object BAD           extends DSLEntity { override def apply(tkn: Token): Terminal = new BAD(tkn) }
 
 // Keyword
@@ -252,9 +260,14 @@ case object PERCENT       extends Symbol
 case object OPEN_PAREN    extends Symbol
 case object CLOSE_PAREN   extends Symbol
 case object OPEN_BRACKET  extends Symbol
+case object AMPERSAND     extends Symbol
+case object CARET         extends Symbol
+case object BAR           extends Symbol
 case object CLOSE_BRACKET extends Symbol
 case object LEFT_LEFT     extends Symbol
 case object RIGHT_RIGHT   extends Symbol
+
+case object  AMPERSAND_AMPERSAND extends Symbol
 // TODO: add all Symbols
 
 // TODO: Do i really need hierachy for built-in's???
@@ -281,8 +294,12 @@ object Symbol {
       case ")" => CLOSE_PAREN
       case "[" => OPEN_BRACKET
       case "]" => CLOSE_BRACKET
+      case "&" => AMPERSAND
+      case "^" => CARET
+      case "|" => BAR
 
       case "<<" => LEFT_LEFT
       case ">>" => RIGHT_RIGHT
+      case "&&" =>  AMPERSAND_AMPERSAND
   }
 }

@@ -1,7 +1,7 @@
 package org.syspro.spc
 package parser.token
 
-import org.syspro.spc.parser.parsing_tree.{BAD, DSLEntity, ParsingTree, Symbol, Terminal}
+import org.syspro.spc.parser.parsing_tree.{AMPERSAND_AMPERSAND, BAD, DSLEntity, ParsingTree, Symbol, Terminal}
 import org.syspro.spc.parser.parsing_tree
 import syspro.tm.lexer
 import syspro.tm.lexer.{IdentifierToken, Keyword, KeywordToken, Token}
@@ -124,11 +124,11 @@ object SyntaxKindConverter {
     case lexer.Symbol.PERCENT => parsing_tree.PERCENT
     case lexer.Symbol.EXCLAMATION => ???
     case lexer.Symbol.TILDE => parsing_tree.TILDE
-    case lexer.Symbol.AMPERSAND => ???
-    case lexer.Symbol.BAR => ???
-    case lexer.Symbol.AMPERSAND_AMPERSAND => ???
+    case lexer.Symbol.AMPERSAND => parsing_tree.AMPERSAND
+    case lexer.Symbol.BAR => parsing_tree.BAR
+    case lexer.Symbol.AMPERSAND_AMPERSAND => parsing_tree.AMPERSAND_AMPERSAND
     case lexer.Symbol.BAR_BAR => ???
-    case lexer.Symbol.CARET => ???
+    case lexer.Symbol.CARET => parsing_tree.CARET
     case lexer.Symbol.LESS_THAN => ???
     case lexer.Symbol.LESS_THAN_EQUALS => ???
     case lexer.Symbol.GREATER_THAN => ???
