@@ -32,9 +32,9 @@ object SyntaxKindConverter {
       case Keyword.DEF => ???
       case Keyword.VAR => ???
       case Keyword.VAL => ???
-      case Keyword.RETURN => ???
-      case Keyword.BREAK => ???
-      case Keyword.CONTINUE => ???
+      case Keyword.RETURN => parsing_tree.RETURN
+      case Keyword.BREAK => parsing_tree.BREAK
+      case Keyword.CONTINUE => parsing_tree.CONTINUE
       case Keyword.ABSTRACT => ???
       case Keyword.VIRTUAL => ???
       case Keyword.OVERRIDE => ???

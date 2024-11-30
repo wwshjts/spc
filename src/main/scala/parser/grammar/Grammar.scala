@@ -166,6 +166,10 @@ object Grammar {
       IfStmt(if_stmt, expr, ident1, stmt1, dedent1, else_stmt, indent2, stmt2, dedent2)
   )
 
+  def return_stmt: Parser[Statement]      = RETURN ~ ?(expression) ^^ (parsed => ReturnStmt(parsed._1, parsed._2))
+  def break_stmt: Parser[Statement]       = BREAK ^^ BreakStmt
+  def continue_stmt: Parser[Statement]    = CONTINUE ^^ ContinueStmt
+  def expression_stmt: Parser[Statement]  = expression ^^ ExprStmt
 
   def statement: Parser[Statement] = while_loop <|> for_loop <|> assignment <|> if_stmt
 

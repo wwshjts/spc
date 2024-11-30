@@ -174,6 +174,9 @@ case class WHILE(tkn: Token)          extends Leaf with Terminal(tkn)
 case class IF(tkn: Token)             extends Leaf with Terminal(tkn)
 case class ELSE(tkn: Token)           extends Leaf with Terminal(tkn)
 case class IN(tkn: Token)             extends Leaf with Terminal(tkn)
+case class BREAK(tkn: Token)          extends Leaf with Terminal(tkn)
+case class CONTINUE(tkn: Token)       extends Leaf with Terminal(tkn)
+case class RETURN(tkn: Token)         extends Leaf with Terminal(tkn)
 
 // some real shit
 case class SeparatedList(trees: ParsingTree*)     extends VarargBranch(trees*) with Grammar
@@ -197,6 +200,20 @@ case class BooleanLiteral(op: Terminal)         extends LiteralExpr(op)
 case class ThisExpr(op: Terminal)               extends LiteralExpr(op)
 case class SuperExpr(op: Terminal)              extends LiteralExpr(op)
 case class NullLiteral(op: Terminal)            extends LiteralExpr(op)
+
+case class BreakStmt(op: Terminal)              extends UnaryBranch(op) with Statement
+
+case class ContinueStmt(op: Terminal)           extends UnaryBranch(op) with Statement
+
+case class ReturnStmt(args: List[ParsingTree])  extends ListVararg(args) with Statement
+case object ReturnStmt {
+  def apply(op: Terminal, ret_val: Option[Expression]): Statement = {
+    val opts: List[Expression] = if (ret_val.isDefined) List(ret_val.get) else List()
+    ReturnStmt(op :: opts)
+  }
+}
+
+case class ExprStmt(expr: Expression)           extends UnaryBranch(expr) with Statement
 
 case class IdentifierName(op: Terminal)                 extends UnaryBranch(op) with Name
 case class OptionName(op: Terminal, name: ParsingTree)  extends BinaryBranch(op, name) with Name
@@ -364,6 +381,9 @@ case object WHILE         extends DSLEntity { override def apply(tkn: Token): Te
 case object IF            extends DSLEntity { override def apply(tkn: Token): Terminal = new IF(tkn) }
 case object ELSE          extends DSLEntity { override def apply(tkn: Token): Terminal = new ELSE(tkn) }
 case object IN            extends DSLEntity { override def apply(tkn: Token): Terminal = new IN(tkn) }
+case object BREAK         extends DSLEntity { override def apply(tkn: Token): Terminal = new BREAK(tkn) }
+case object CONTINUE      extends DSLEntity { override def apply(tkn: Token): Terminal = new CONTINUE(tkn)}
+case object RETURN        extends DSLEntity { override def apply(tkn: Token): Terminal = new RETURN(tkn)}
 
 sealed trait Symbol       extends DSLEntity
 case object DOT           extends Symbol
