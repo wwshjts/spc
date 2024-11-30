@@ -122,12 +122,12 @@ object SyntaxKindConverter {
     case lexer.Symbol.ASTERISK => parsing_tree.ASTERISK
     case lexer.Symbol.SLASH => parsing_tree.SLASH
     case lexer.Symbol.PERCENT => parsing_tree.PERCENT
-    case lexer.Symbol.EXCLAMATION => ???
+    case lexer.Symbol.EXCLAMATION => parsing_tree.EXCLAMATION
     case lexer.Symbol.TILDE => parsing_tree.TILDE
     case lexer.Symbol.AMPERSAND => parsing_tree.AMPERSAND
     case lexer.Symbol.BAR => parsing_tree.BAR
     case lexer.Symbol.AMPERSAND_AMPERSAND => parsing_tree.AMPERSAND_AMPERSAND
-    case lexer.Symbol.BAR_BAR => ???
+    case lexer.Symbol.BAR_BAR => parsing_tree.BAR_BAR
     case lexer.Symbol.CARET => parsing_tree.CARET
     case lexer.Symbol.LESS_THAN => parsing_tree.LEFT
     case lexer.Symbol.LESS_THAN_EQUALS => parsing_tree.LEFT_EQ

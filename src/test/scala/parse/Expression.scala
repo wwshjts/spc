@@ -279,6 +279,13 @@ class Expression extends AnyFunSuite {
     assertResult(expected)(res)
   }
 
+  test("logical not") {
+    val input = Lexer("! true")
+    val res = expression(input)
+
+    println(res)
+  }
+
   test("logical and") {
     val input = Lexer("1 && 2")
     val res = and(input)
@@ -313,5 +320,30 @@ class Expression extends AnyFunSuite {
 
     assertResult(expected)(res)
   }
+
+  test("logical or") {
+    val input = Lexer("a || !b && c")
+    val res = expression(input)
+
+    val expected =
+      Success(
+        OR(
+          IdentifierName(IDENTIFIER(input(0))),
+          BAR_BAR(input(1)),
+          NOT(
+            EXCLAMATION(input(2)),
+            AND(
+              IdentifierName(IDENTIFIER(input(3))),
+              AMPERSAND_AMPERSAND(input(4)),
+              IdentifierName(IDENTIFIER(input(5))))
+          )
+        ),List()
+      )
+
+    assertResult(expected)(res)
+
+  }
 }
+
+
 

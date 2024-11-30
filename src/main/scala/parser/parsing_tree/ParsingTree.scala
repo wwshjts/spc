@@ -135,12 +135,14 @@ case class QUESTION(tkn: Token)               extends Leaf with Terminal(tkn)
 case class LEFT(tkn: Token)                   extends Leaf with Terminal(tkn)
 case class RIGHT(tkn: Token)                  extends Leaf with Terminal(tkn)
 case class EQ_EQ(tkn: Token)                  extends Leaf with Terminal(tkn)
+case class EXCLAMATION(tkn: Token)            extends Leaf with Terminal(tkn)
 case class NEQ(tkn: Token)                    extends Leaf with Terminal(tkn)
 case class LEFT_EQ(tkn: Token)                extends Leaf with Terminal(tkn)
 case class RIGHT_EQ(tkn: Token)               extends Leaf with Terminal(tkn)
 case class LEFT_LEFT(tkn: Token)              extends Leaf with Terminal(tkn)
 case class RIGHT_RIGHT(tkn: Token)            extends Leaf with Terminal(tkn)
 case class AMPERSAND_AMPERSAND(tkn: Token)    extends Leaf with Terminal(tkn)
+case class BAR_BAR(tkn: Token)                extends Leaf with Terminal(tkn)
 // TODO: add other symbols to IR
 
 // keyword
@@ -201,7 +203,10 @@ case class RIGHT_SHIFT(left: ParsingTree, op: Terminal, right: ParsingTree) exte
 case class BitwiseAnd(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
 case class BitwiseOr(left: ParsingTree, op: Terminal, right: ParsingTree)   extends BinaryExpression(left, op, right)
 case class Xor(left: ParsingTree, op: Terminal, right: ParsingTree)         extends BinaryExpression(left, op, right)
+
 case class AND(left: ParsingTree, op: Terminal, right: ParsingTree)         extends BinaryExpression(left, op, right)
+case class OR(left: ParsingTree, op: Terminal, right: ParsingTree)          extends BinaryExpression(left, op, right)
+case class NOT(ex: Terminal, operand: ParsingTree)                          extends UnaryExpr(ex, operand)
 
 case class LessThan(left: ParsingTree, op: Terminal, right: ParsingTree)    extends BinaryExpression(left, op, right)
 case class GreaterThan(left: ParsingTree, op: Terminal, right: ParsingTree) extends BinaryExpression(left, op, right)
@@ -222,6 +227,7 @@ object BinaryExpression {
       case t: LEFT_LEFT   => LEFT_SHIFT(left, op, right)
       case t: RIGHT_RIGHT => RIGHT_SHIFT(left, op, right)
       case t: AMPERSAND_AMPERSAND => AND(left, op, right)
+      case t: BAR_BAR => OR(left, op, right)
       case t: CARET => Xor(left, op, right)
       case t: BAR => BitwiseOr(left, op, right)
 
@@ -300,6 +306,7 @@ case object BAR           extends Symbol
 case object QUESTION      extends Symbol
 case object LEFT          extends Symbol
 case object RIGHT         extends Symbol
+case object EXCLAMATION   extends Symbol
 case object NEQ           extends Symbol
 case object EQ_EQ         extends Symbol
 case object LEFT_EQ       extends Symbol
@@ -307,6 +314,7 @@ case object RIGHT_EQ      extends Symbol
 case object CLOSE_BRACKET extends Symbol
 case object LEFT_LEFT     extends Symbol
 case object RIGHT_RIGHT   extends Symbol
+case object BAR_BAR       extends Symbol
 
 case object  AMPERSAND_AMPERSAND extends Symbol
 // TODO: add all Symbols
@@ -341,6 +349,7 @@ object Symbol {
       case "<" => LEFT
       case ">" => RIGHT
       case "?" => QUESTION
+      case "!" => EXCLAMATION
 
       case "==" => EQ_EQ
       case "!=" => NEQ
@@ -348,6 +357,7 @@ object Symbol {
       case ">=" => RIGHT_EQ
       case "<<" => LEFT_LEFT
       case ">>" => RIGHT_RIGHT
-      case "&&" =>  AMPERSAND_AMPERSAND
+      case "&&" => AMPERSAND_AMPERSAND
+      case "||" => BAR_BAR
   }
 }

@@ -112,7 +112,6 @@ object Grammar {
   def bitwiseOr: Parser[Expression] = xor ~ *?("|" ~ xor) ^^ _mkBinary
 
   // **** Priority 8 ****
-  // TODO: non effective grammar but I don't care
   def _is: Parser[IsContainer] = IS ~ name ~ ?(IDENTIFIER) ^^ (parsed =>
     val ((is, name), opt) = parsed
     IsContainer(is, name, opt)
@@ -131,11 +130,16 @@ object Grammar {
       }
 
     )
+  // **** Priority 9 ****
+  def logical_not: Parser[Expression] = ("!" ~ expression ^^ ( parsed => NOT(parsed._1, parsed._2) )) <|> comparsion
 
   // **** Priority 10 ****
-  def and: Parser[Expression] = shift ~ *?("&&" ~ shift) ^^ _mkBinary
+  def and: Parser[Expression] = logical_not ~ *?("&&" ~ logical_not) ^^ _mkBinary
 
-  def expression: Parser[Expression] = comparsion
+  // **** Priority 11 ****
+  def or: Parser[Expression] = and ~ *?("||" ~ and) ^^ _mkBinary
+
+  def expression: Parser[Expression] = or
   // **********
 
   def _mkBinary(repr: (Expression, List[(Terminal, Expression)])): Expression = {
