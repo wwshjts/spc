@@ -96,10 +96,13 @@ object Grammar {
   // **** Priority 7 ****
   def bitwiseOr: Parser[Expression] = xor ~ *?("|" ~ xor) ^^ _mkBinary
 
+  // **** Priority 8 ****
+  def comparsion: Parser[Expression] = bitwiseOr ~ *?(("<" <|> "<=" <|> ">" <|> ">=" <|> "==" <|> "!=") ~ bitwiseOr) ^^ _mkBinary
+
   // **** Priority 10 ****
   def and: Parser[Expression] = shift ~ *?("&&" ~ shift) ^^ _mkBinary
 
-  def expression: Parser[Expression] = xor
+  def expression: Parser[Expression] = comparsion
   // **********
 
   def _mkBinary(repr: (Expression, List[(Terminal, Expression)])): Expression = {

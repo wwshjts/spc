@@ -191,6 +191,69 @@ class Expression extends AnyFunSuite {
     assertResult(expected)(res)
   }
 
+  test("less greater") {
+    val input = Lexer("1 < 2 > 3")
+    val res = expression(input)
+
+    val expected =
+      Success(
+        GreaterThan(
+          LessThan(
+            IntegerLiteral(INTEGER(input(0))),
+            LEFT(input(1)),
+            IntegerLiteral(INTEGER(input(2)))
+          ),
+          RIGHT(input(3)),
+          IntegerLiteral(INTEGER(input(4)))
+        ),List()
+      )
+
+    assertResult(expected)(res)
+  }
+
+  test("equals") {
+    val input = Lexer("1 == 2 != 3")
+    val res = expression(input)
+
+    val expected =
+      Success(
+        NEqual(
+          Equal(
+            IntegerLiteral(INTEGER(input(0))),
+            EQ_EQ(input(1)),
+            IntegerLiteral(INTEGER(input(2)))
+          ),
+          NEQ(input(3)),
+          IntegerLiteral(INTEGER(input(4)))
+        ),List()
+      )
+
+    assertResult(expected)(res)
+
+  }
+
+  test("<= >=") {
+    val input = Lexer("1 <= 2 >= 3")
+    val res = expression(input)
+
+    val expected =
+      Success(
+        GreaterOrEq(
+          LessOrEq(
+            IntegerLiteral(INTEGER(input(0))),
+            LEFT_EQ(input(1)),
+            IntegerLiteral(INTEGER(input(2)))
+          ),
+          RIGHT_EQ(input(3)),
+          IntegerLiteral(INTEGER(input(4)))
+        ),List()
+      )
+
+    assertResult(expected)(res)
+
+  }
+
+
   test("logical and") {
     val input = Lexer("1 && 2")
     val res = and(input)
