@@ -40,4 +40,28 @@ class Statement extends AnyFunSuite {
     val res = statement(input)
     // TODO:
   }
+
+  test("minimal while") {
+    val input = Lexer(
+      """
+        |while true
+        |doSmth = 3
+        |""".stripMargin)
+    val res = statement(input)
+  }
+
+  test("if stmt") {
+    val input = Lexer(
+      """
+        |if !flag
+        |   t = 42
+        |else
+        |   t = 0
+        |""".stripMargin
+    )
+
+    val res = statement(input)
+
+    println(res)
+  }
 }

@@ -74,10 +74,10 @@ abstract class ListVararg(args: List[ParsingTree]) extends Branch {
   override def rank(): Int = args.size
 }
 
-object VarargBranch {
-  def optionalVarargs(opt: Option[ParsingTree]*): Seq[ParsingTree] = opt.flatMap {
-    case Some(value) => Seq(value)
-    case None => Seq.empty
+object ListVararg {
+  def optionalVarargs(opt: Option[ParsingTree]*):List[ParsingTree] = opt.toList.flatMap {
+    case Some(value) => List(value)
+    case None => List.empty
   }
 
 }
@@ -296,6 +296,22 @@ object WhileStmt {
     new WhileStmt(s ::: opts)
   }
 }
+
+case class IfStmt(args: List[ParsingTree]) extends ListVararg(args) with Statement
+object IfStmt {
+  // IF Expression INDENT? LIST[Statement]? DEDENT? ELSE? INDENT? LIST[Statement]? DEDENT?
+
+  def apply(if_lit: Terminal, expr: Expression,
+            indent_opt: Option[Terminal], list_opt: Option[GrammarList], dedent_opt: Option[Terminal],
+            else_opt: Option[Terminal], indent1_opt: Option[Terminal], list2_opt: Option[GrammarList], dedent1_opt: Option[Terminal]): Statement = {
+
+    val opts = ListVararg.optionalVarargs(indent_opt, list_opt, dedent_opt, else_opt, indent1_opt, list2_opt, dedent1_opt)
+
+    IfStmt((if_lit :: expr :: Nil) ::: opts)
+  }
+
+}
+
 
 // ============================= Syntax ==========================
 

@@ -143,10 +143,15 @@ object Grammar {
   def expression: Parser[Expression] = or
   // **** Statements ****
 
-  def loop_for: Parser[Statement] = FOR ~ primary ~ IN ~ expression ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ ( parsed =>
+  def for_loop: Parser[Statement] = FOR ~ primary ~ IN ~ expression ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ (parsed =>
     val ((((((fr, primary), in), expr), ident_opt), list_opt), dedent_opt) = parsed
 
     ForStmt(fr, primary, in, expr, ident_opt, list_opt, dedent_opt)
+  )
+
+  def while_loop: Parser[Statement] = WHILE ~ expression ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ (parsed =>
+    val ((((wle, expr), ident), list), dedent) = parsed
+    WhileStmt(wle, expr, ident, list, dedent)
   )
 
   def assignment: Parser[Statement] = primary ~ "=" ~ expression ^^ (parsed =>
@@ -154,7 +159,15 @@ object Grammar {
     Assignment(l, eq, r)
   )
 
-  def statement: Parser[Statement] = loop_for <|> assignment
+  def if_stmt: Parser[Statement] = IF ~ expression ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ~ ?(ELSE) ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ (
+    parsed =>
+      // TODO: really ugly, I need some API to work with nested tuples and somehow do not lose the types
+      val ((((((((if_stmt, expr), ident1), stmt1), dedent1), else_stmt), indent2), stmt2), dedent2) = parsed
+      IfStmt(if_stmt, expr, ident1, stmt1, dedent1, else_stmt, indent2, stmt2, dedent2)
+  )
+
+
+  def statement: Parser[Statement] = while_loop <|> for_loop <|> assignment <|> if_stmt
 
   def _mkBinary(repr: (Expression, List[(Terminal, Expression)])): Expression = {
     val (left, kleene_star) = repr
@@ -225,5 +238,6 @@ object Grammar {
   case class IndexExprContainer(lb: Terminal, expr: Expression, rb: Terminal)     extends PrimaryContainer
 
   case class InvokeContainer(lb: Terminal, sep_list: SeparatedList, rb: Terminal) extends PrimaryContainer
+
 
 }
