@@ -261,6 +261,12 @@ object BasicLeafParser {
     }
   }
 
+  /** Parser, that always succeeds. Doesn't consume any tokens */
+  def eps[A]: Parser[A] = {
+    (input: List[Token]) => {
+      Success(???, input)
+    }
+  }
 
   // Conversion from String, eah, type will be deduced to Terminal
   given Conversion[Predef.String, Parser[Terminal]] with

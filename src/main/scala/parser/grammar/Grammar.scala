@@ -3,6 +3,7 @@ package parser.grammar
 
 import parser.parsing_tree.*
 
+import org.syspro.spc.parser.grammar.BasicLeafParser.eps
 import org.syspro.spc.parser.parsing_tree
 
 /**
@@ -33,32 +34,43 @@ object Grammar {
 
   def atom: Parser[Atom] = integer <|> string <|> bool <|> rune <|> this_expr
                                             <|> super_expr <|> null_lit <|> identif
+
+
   // **** Priority 0 ****
-  // primary expressions
+  //def primary:Parser[Primary] =  invoke <|> index_expr <|> memberAccess <|> group <|> atom
 
-  def group: Parser[Primary] = ("(" ~ expression ~ ")" ^^ (
-    parsed =>  { val ((lb, expr), rb) = parsed; GroupBy(lb, expr, rb) }
-  )) <|> atom
+  // Made elimination of left recursion in primary expressions
 
-  def primary:Parser[Primary] =  invoke <|> index_expr <|> memberAccess <|> group <|> atom
+  // all non left-recursive productions of primary
+  //def primary:Parser[Primary] = group ~ _primary  <|> atom ~ _primary ^^ ???
 
-  // (null.first).second
-  def memberAccess: Parser[Primary] = (group ~ **(DOT ~ IDENTIFIER)
-    ^^ (parsed => flatten1(parsed)) ^^ (parsed => foldFirst(parsed)(MemberAccess)) ^^ (parsed => foldTernary(parsed)(MemberAccess))) <|> group
+  // Non left-recursive primary rule
+  // This grammar transformation is fully equivalent to ordinary left recursion reduction
+  def primary: Parser[Primary] = (atom <|> group) ~ *?(_primary)
+    ^^ (parsed =>
+      val (left, kleene_star) = parsed
+      kleene_star match {
+        case List() => left
+        case head :: tail =>
+          val first = head(left)
+          tail.foldLeft(first)((left, container) => container(left))
+      }
+    )
 
-  def index_expr: Parser[Primary] = (memberAccess ~ "[" ~ term ~ "]" ^^ ( parsed =>
-    val (((indexed, lb), expr), rb) = parsed
-    Index(indexed, lb, expr, rb)
-  )) <|> memberAccess
 
-  def invoke: Parser[Primary] = ((index_expr ~ "(" ~ separatedList_expr_comma ~ ")") ^^ ( parsed =>
-    val (((inv, lb), sep_list), rb) = parsed
-    Invoke(inv, lb, sep_list, rb)
-  )) <|> index_expr
+  private def _primary: Parser[PrimaryContainer] = _memberAccess <|> _index_expr <|> _invoke
+
+  private def group: Parser[Primary] = "(" ~ expression ~ ")" ^^ (parsed => GroupBy(parsed._1._1, parsed._1._2, parsed._2))
+
+  private def _memberAccess: Parser[PrimaryContainer] = DOT ~ IDENTIFIER ^^ (parsed => MemberAccessContainer(parsed._1, parsed._2))
+
+  private def _index_expr: Parser[PrimaryContainer] = "[" ~ expression ~ "]" ^^ (parsed => IndexExprContainer(parsed._1._1, parsed._1._2, parsed._2))
+
+  private def _invoke: Parser[PrimaryContainer] = "(" ~ separatedList_expr_comma ~ ")" ^^ (parsed => InvokeContainer(parsed._1._1, parsed._1._2, parsed._2))
 
   // **** Priority 1 ****
   // Unary expression
-  def unary: Parser[Expression] = (negate <|> u_plus <|> bitwiseNot) <|> invoke
+  def unary: Parser[Expression] = (negate <|> u_plus <|> bitwiseNot) <|> primary
 
   def negate: Parser[Negate]            = ("-" ~ unary) ^^ (p => Negate(p._1, p._2))
   def u_plus: Parser[UPlus]             = ("+" ~ unary) ^^ (p => UPlus(p._1, p._2))
@@ -107,4 +119,20 @@ object Grammar {
       f(left, op, right)
     )
   }
+
+  sealed trait PrimaryContainer {
+    def apply(expr: Primary): Primary = {
+      this match
+        case MemberAccessContainer(dot, i) => MemberAccess(expr, dot, i)
+        case IndexExprContainer(lb, expr, rb) => Index(expr, lb, expr, rb)
+        case InvokeContainer(lb, sep_list, rb) => Invoke(expr, lb, sep_list, rb)
+    }
+  }
+
+  case class MemberAccessContainer(dot: Terminal, i: Terminal) extends PrimaryContainer
+
+  case class IndexExprContainer(lb: Terminal, expr: Expression, rb: Terminal) extends PrimaryContainer
+
+  case class InvokeContainer(lb: Terminal, sep_list: SeparatedList, rb: Terminal) extends PrimaryContainer
+
 }
