@@ -180,6 +180,12 @@ case class MemberAccess(left: ParsingTree, dot: Terminal, i: Terminal)          
 case class Index(indexed: ParsingTree, l: Terminal, index: ParsingTree, r: Terminal)  extends VarargBranch(indexed, l, index, r) with Primary
 case class Invoke(i: ParsingTree, lp: Terminal, list: SeparatedList, rp: Terminal)    extends VarargBranch(i, lp, list, rp) with Primary
 
+case class IsExpression private (args: ParsingTree*) extends VarargBranch(args*) with Expression
+case object IsExpression {
+  def apply(expr: ParsingTree, is: Terminal, name_expr: Name) = new IsExpression(expr, is, name_expr)
+  def apply(expr: ParsingTree, is: Terminal, name_expr: Name, opt: Terminal) = new IsExpression(expr, is, name_expr, opt)
+}
+
 abstract class BinaryExpression(left: ParsingTree, op: Terminal, right: ParsingTree) extends TernaryBranch(left, op, right) with Expression {}
 
 case class ADD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)

@@ -254,6 +254,31 @@ class Expression extends AnyFunSuite {
   }
 
 
+  test("is expression") {
+    //val input = Lexer("(1 + 2) is Integer is A")
+    val input = Lexer("(1 + 2) is Integer")
+    val res = expression(input)
+
+    val expected =
+      Success(
+        IsExpression(
+          GroupBy(
+            OPEN_PAREN(input(0)),
+            ADD(
+              IntegerLiteral(INTEGER(input(1))),
+              PLUS(input(2)),
+              IntegerLiteral(INTEGER(input(3)))
+            ),
+            CLOSE_PAREN(input(4))
+          ),
+          IS(input(5)),
+          IdentifierName(IDENTIFIER(input(6)))
+        ),List()
+      )
+
+    assertResult(expected)(res)
+  }
+
   test("logical and") {
     val input = Lexer("1 && 2")
     val res = and(input)

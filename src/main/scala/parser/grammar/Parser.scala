@@ -185,9 +185,9 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
 object Combinators {
   def **[A](p: => Parser[A]): Parser[(A, List[A])] = repeatAtLeastOnce(p)
 
-  def |**[A](p: => Parser[A]): Parser[List[A]] = repeatAtLeastOnce(p) ^^ (parsed =>
-    parsed match
-      case (head, tail) => head :: tail
+  def |**[A](p: => Parser[A]): Parser[List[A]] = repeatAtLeastOnce(p) ^^ ({
+    case (head, tail) => head :: tail
+  }
     )
 
   def *?[A](p: => Parser[A]): Parser[List[A]] = repeat(p)
@@ -201,7 +201,6 @@ object Combinators {
 
     applyp
   }
-
 
   def repeatAtLeastOnce[A](p: => Parser[A]): Parser[(A, List[A])] = repeatAtLeastOnce(p, p)
 
@@ -229,6 +228,17 @@ object Combinators {
         continue(remain_input) match
           case Success(r1, remain_input) => Success((result, r1), remain_input)
       case f @ Failure(msg) => f
+    }
+  }
+
+  def ?[A](p: => Parser[A]): Parser[Option[A]] = has(p)
+
+  /** Matches expression that p matches, or returns empty list */
+  def has[A](p: => Parser[A]): Parser[Option[A]] = {
+    (input: List[Token]) => {
+      p(input) match
+        case Success(result, remain_input) => Success(Some(result), remain_input)
+        case Failure(msg) => Success(None, input)
     }
   }
 

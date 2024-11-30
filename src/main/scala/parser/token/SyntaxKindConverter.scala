@@ -23,7 +23,7 @@ object SyntaxKindConverter {
     kw match
       case Keyword.THIS => parsing_tree.THIS
       case Keyword.SUPER => parsing_tree.SUPER
-      case Keyword.IS => ???
+      case Keyword.IS => parsing_tree.IS
       case Keyword.IF => ???
       case Keyword.ELSE => ???
       case Keyword.FOR => ???

@@ -93,7 +93,6 @@ object Grammar {
   def u_plus: Parser[UPlus]             = ("+" ~ unary) ^^ (p => UPlus(p._1, p._2))
   def bitwiseNot: Parser[BitwiseNot]    = ("~" ~ unary) ^^ (p => BitwiseNot(p._1, p._2))
 
-  // TODO: use *? instead of **
   // **** Priority 2 ****
   def factor: Parser[Expression] = unary ~ *?(("*" <|> "/") ~ unary) ^^ _mkBinary
 
@@ -113,8 +112,25 @@ object Grammar {
   def bitwiseOr: Parser[Expression] = xor ~ *?("|" ~ xor) ^^ _mkBinary
 
   // **** Priority 8 ****
-  // TODO: is expression
-  def comparsion: Parser[Expression] = bitwiseOr ~ *?(("<" <|> "<=" <|> ">" <|> ">=" <|> "==" <|> "!=") ~ bitwiseOr) ^^ _mkBinary
+  // TODO: non effective grammar but I don't care
+  def _is: Parser[IsContainer] = IS ~ name ~ ?(IDENTIFIER) ^^ (parsed =>
+    val ((is, name), opt) = parsed
+    IsContainer(is, name, opt)
+  )
+  def _cmp_term: Parser[CmpContainer] = |**(("<" <|> "<=" <|> ">" <|> ">=" <|> "==" <|> "!=") ~ bitwiseOr) ^^ CmpContainer
+  def _comparison: Parser[ComparisonContainer] = _is <|> _cmp_term
+
+  def comparsion: Parser[Expression] = bitwiseOr ~ *?(_comparison) ^^ (parsed =>
+    val (left, kleene_star) = parsed
+
+    kleene_star match
+      case List() => left
+      case head :: tail => {
+        val first = head(left)
+        tail.foldLeft(first)((left, container) => container(left))
+      }
+
+    )
 
   // **** Priority 10 ****
   def and: Parser[Expression] = shift ~ *?("&&" ~ shift) ^^ _mkBinary
@@ -165,6 +181,17 @@ object Grammar {
       f(left, op, right)
     )
   }
+
+  sealed trait ComparisonContainer {
+    def apply(left: Expression): Expression = this match
+      case IsContainer(is, name, opt) => opt match
+        case Some(value)  => IsExpression(left, is, name, value)
+        case None         => IsExpression(left, is, name)
+      case CmpContainer(list) => _mkBinary((left, list))
+  }
+  case class IsContainer(is: Terminal, name: Name, opt: Option[Terminal]) extends ComparisonContainer
+  case class CmpContainer(list: List[(Terminal, Expression)])             extends ComparisonContainer
+
 
   sealed trait PrimaryContainer {
     def apply(left: Primary): Primary = {
