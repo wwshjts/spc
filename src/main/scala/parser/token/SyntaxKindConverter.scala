@@ -29,9 +29,9 @@ object SyntaxKindConverter {
       case Keyword.FOR => parsing_tree.FOR
       case Keyword.IN => parsing_tree.IN
       case Keyword.WHILE => parsing_tree.WHILE
-      case Keyword.DEF => ???
-      case Keyword.VAR => ???
-      case Keyword.VAL => ???
+      case Keyword.DEF => parsing_tree.DEF
+      case Keyword.VAR => parsing_tree.VAR
+      case Keyword.VAL => parsing_tree.VAL
       case Keyword.RETURN => parsing_tree.RETURN
       case Keyword.BREAK => parsing_tree.BREAK
       case Keyword.CONTINUE => parsing_tree.CONTINUE
@@ -143,7 +143,7 @@ object SyntaxKindConverter {
     case lexer.Symbol.EQUALS_EQUALS => parsing_tree.EQ_EQ
     case lexer.Symbol.EXCLAMATION_EQUALS => parsing_tree.NEQ
     case lexer.Symbol.QUESTION => parsing_tree.QUESTION
-    case lexer.Symbol.BOUND => ???
+    case lexer.Symbol.BOUND => parsing_tree.BOUND
     case lexer.Symbol.DOT => parsing_tree.DOT
   }
 }

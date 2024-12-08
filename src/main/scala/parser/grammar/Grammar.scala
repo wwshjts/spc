@@ -26,40 +26,65 @@ object Grammar {
   def this_expr: Parser[ThisExpr]       = THIS ^^ ThisExpr
   def super_expr: Parser[SuperExpr]     = SUPER ^^ SuperExpr
 
+  // Terminals
+  def keyword_terminal: Parser[Terminal] = THIS <|> SUPER <|> NULL <|> IS <|> FOR <|> WHILE <|> IF <|> ELSE <|> IN
+  <|> BREAK <|> CONTINUE <|> RETURN <|> VAR <|> VAL
+
+  def symbol_terminal: Parser[Terminal] = "." <|> ":" <|> "," <|> "+" <|> "-" <|> "*" <|> "/" <|> "~" <|> "%" <|> "(" <|> ")"
+  <|> "[" <|> "]" <|> "&" <|> "^" <|> "|" <|> "<" <|> ">" <|> "?" <|> "!" <|> "=" <|> "==" <|> "!=" <|> "<=" <|> ">=" <|> "<<"
+  <|> ">>" <|> "&&" <|> "||" <|> "<:"
+
+  def terminal: Parser[Terminal] = BAD <|> INDENT <|> DEDENT <|> IDENTIFIER <|> RUNE <|> BOOLEAN <|> INTEGER <|> STRING
+  <|> keyword_terminal <|> symbol_terminal
+
   // Name expressions
   def name: Parser[Name] =  option_name <|> generic_name <|> identifier_name
-  def identifier_name: Parser[IdentifierName]   = IDENTIFIER ^^ IdentifierName
-  def option_name: Parser[OptionName]           = "?" ~ name ^^ ( parsed =>
+  def identifier_name: Parser[IdentifierName] = IDENTIFIER ^^ IdentifierName
+  def option_name: Parser[OptionName]  = "?" ~ name ^^ { parsed =>
     val (q, name) = parsed
     OptionName(q, name)
-  )
-  def generic_name: Parser[GenericName]         = IDENTIFIER ~ "<" ~ separatedList_name_comma ~ ">" ^^ (parsed =>
+  }
+
+  def generic_name: Parser[GenericName] = IDENTIFIER ~ "<" ~ separatedList_name_comma ~ ">" ^^ { parsed =>
     val (((i, lt), sep), gt) = parsed
     GenericName(i, lt, sep, gt)
-  )
+  }
 
-  def separatedList_expr_comma: Parser[SeparatedList] = (*?(expression ~ ",")) ~ expression ^^ (parsed =>
-      val (list, expr) = parsed
-      SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
-    )
+  def separatedList_expr_comma: Parser[SeparatedList] = (*?(expression ~ ",")) ~ expression ^^ { parsed =>
+    val (list, expr) = parsed
+    SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
+  }
 
-  def separatedList_name_comma: Parser[SeparatedList] = (*?(name ~ ",")) ~ name ^^ (parsed =>
-      val (list, expr) = parsed
-      SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
-    )
+  def separatedList_name_comma: Parser[SeparatedList] = (*?(name ~ ",")) ~ name ^^ { parsed =>
+    val (list, expr) = parsed
+    SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
+  }
+
+  def separatedList_name_amper: Parser[SeparatedList] = *?(name ~ "&") ~ name ^^ { parsed =>
+    val (list, amper) = parsed
+    SeparatedList((amper :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
+  }
+
+  def separatedList_parameterDef_comma: Parser[SeparatedList] = *?(parameter_def ~ ",") ~ parameter_def ^^ { parsed =>
+    val (list, comma) = parsed
+    SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse *)
+  }
+
+  def separatedList_typeParameterDef_comma: Parser[SeparatedList] = *?(type_param_def ~ ",") ~ parameter_def ^^ { parsed =>
+    val (list, comma) = parsed
+    SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse *)
+  }
 
   def list_stmt: Parser[GrammarList] = |**(statement) ^^ GrammarList
+  def list_term: Parser[GrammarList] = |**(terminal) ^^ GrammarList
+  def list_def: Parser[GrammarList] =  |**(definition) ^^ GrammarList
+
+  def type_bound: Parser[TypeBound]  = "<:" ~ separatedList_name_amper ^^ (parsed => TypeBound(parsed._1, parsed._2))
 
   def atom: Parser[Primary] = integer <|> string <|> bool <|> rune <|> this_expr
                                             <|> super_expr <|> null_lit <|> name
 
   // **** Priority 0 ****
-  //def primary:Parser[Primary] =  invoke <|> index_expr <|> memberAccess <|> group <|> atom
-
-  // Made elimination of left recursion in primary expressions
-
-  // all non left-recursive productions of primary
-  //def primary:Parser[Primary] = group ~ _primary  <|> atom ~ _primary ^^ ???
 
   // Non left-recursive primary rule
   // This grammar transformation is fully equivalent to ordinary left recursion reduction
@@ -141,8 +166,8 @@ object Grammar {
   def or: Parser[Expression] = and ~ *?("||" ~ and) ^^ _mkBinary
 
   def expression: Parser[Expression] = or
-  // **** Statements ****
 
+  // **** Statements ****
   def for_loop: Parser[Statement] = FOR ~ primary ~ IN ~ expression ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ (parsed =>
     val ((((((fr, primary), in), expr), ident_opt), list_opt), dedent_opt) = parsed
 
@@ -166,12 +191,50 @@ object Grammar {
       IfStmt(if_stmt, expr, ident1, stmt1, dedent1, else_stmt, indent2, stmt2, dedent2)
   )
 
-  def return_stmt: Parser[Statement]      = RETURN ~ ?(expression) ^^ (parsed => ReturnStmt(parsed._1, parsed._2))
-  def break_stmt: Parser[Statement]       = BREAK ^^ BreakStmt
-  def continue_stmt: Parser[Statement]    = CONTINUE ^^ ContinueStmt
-  def expression_stmt: Parser[Statement]  = expression ^^ ExprStmt
+  def return_stmt: Parser[Statement]        = RETURN ~ ?(expression) ^^ (parsed => ReturnStmt(parsed._1, parsed._2))
+  def break_stmt: Parser[Statement]         = BREAK ^^ BreakStmt
+  def continue_stmt: Parser[Statement]      = CONTINUE ^^ ContinueStmt
+  def expression_stmt: Parser[Statement]    = expression ^^ ExprStmt
+  def variable_def_stmt: Parser[Statement]  = variable_def ^^ VarDefStmt
 
-  def statement: Parser[Statement] = while_loop <|> for_loop <|> assignment <|> if_stmt
+  def statement: Parser[Statement] = while_loop <|> for_loop <|> assignment <|> if_stmt <|> return_stmt <|> break_stmt
+                                    <|> continue_stmt <|> expression_stmt <|> variable_def_stmt
+
+  // **** Definitions ****
+  def variable_def: Parser[VariableDef] = (VAL <|> VAR) ~ IDENTIFIER ~ ?(COLON) ~ ?(name) ~ ?("=") ~ ?(expression) ^^ (
+    parsed =>
+      val (((((md, identifier), colon_opt), name_opt), eq_opt), expr_opt) = parsed
+      VariableDef(md, identifier, colon_opt, name_opt, eq_opt, expr_opt)
+  )
+
+  def parameter_def: Parser[Definition] = IDENTIFIER ~ COLON ~ name ^^ {
+    parsed =>
+      val ((identifier, colon), name) = parsed
+      ParameterDef(identifier, colon, name)
+  }
+
+  def type_param_def: Parser[Definition] = IDENTIFIER ~ ?(type_bound) ^^ {
+    parsed => TypeParamDef(parsed._1, parsed._2)
+  }
+
+  def function_def: Parser[FunctionDef] =
+    list_term ~ DEF ~ terminal ~ "(" ~ ?(separatedList_parameterDef_comma) ~ ")" ~ ?(":") ~ ?(name) ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ { parsed =>
+
+    val ((((((((((mod, df), name), op), args), cp), colon_opt), ret_type_opt), indent_opt), body_opt), dedent_opt) = parsed
+
+    FunctionDef(mod, df, name, op, args, cp, colon_opt, ret_type_opt, indent_opt, body_opt, dedent_opt)
+  }
+
+  // Terminal IDENTIFIER LESS_THAN? SEPARATED_LIST[TYPE_PARAMETER_DEFINITION, COMMA]? GREATER_THAN? TYPE_BOUND? INDENT? LIST[Definition]? DEDENT?
+  def type_def: Parser[TypeDefinition] =
+    terminal ~ IDENTIFIER ~ ?("<") ~ ?(separatedList_typeParameterDef_comma) ~ ?(">") ~ ?(type_bound) ~ ?(INDENT) ~ ?(list_def) ~ ?(DEDENT) ^^ { parsed =>
+
+    val ((((((((mod, name), lt_opt), params_opt), gt_opt), bound_opt), indent_opt), defs_opt), dedent_opt) = parsed
+
+    TypeDefinition(mod, name, lt_opt, params_opt, gt_opt, bound_opt, indent_opt, defs_opt, dedent_opt)
+  }
+
+  def definition: Parser[Definition] = variable_def <|> parameter_def <|> type_param_def <|> function_def <|> type_def
 
   def _mkBinary(repr: (Expression, List[(Terminal, Expression)])): Expression = {
     val (left, kleene_star) = repr

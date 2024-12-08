@@ -115,6 +115,8 @@ sealed trait Name extends Primary
 sealed trait BinaryExpr extends Expression
 
 sealed trait Statement extends Grammar
+
+sealed trait Definition extends Grammar
 // ---------------------------------------------
 
 
@@ -162,7 +164,7 @@ case class LEFT_LEFT(tkn: Token)              extends Leaf with Terminal(tkn)
 case class RIGHT_RIGHT(tkn: Token)            extends Leaf with Terminal(tkn)
 case class AMPERSAND_AMPERSAND(tkn: Token)    extends Leaf with Terminal(tkn)
 case class BAR_BAR(tkn: Token)                extends Leaf with Terminal(tkn)
-// TODO: add other symbols to IR
+case class BOUND(tkn: Token)                  extends Leaf with Terminal(tkn)
 
 // keyword
 case class THIS(tkn: Token)           extends Leaf with Terminal(tkn)
@@ -177,10 +179,14 @@ case class IN(tkn: Token)             extends Leaf with Terminal(tkn)
 case class BREAK(tkn: Token)          extends Leaf with Terminal(tkn)
 case class CONTINUE(tkn: Token)       extends Leaf with Terminal(tkn)
 case class RETURN(tkn: Token)         extends Leaf with Terminal(tkn)
+case class VAR(tkn: Token)            extends Leaf with Terminal(tkn)
+case class VAL(tkn: Token)            extends Leaf with Terminal(tkn)
+case class DEF(tkn: Token)            extends Leaf with Terminal(tkn)
 
 // some real shit
 case class SeparatedList(trees: ParsingTree*)     extends VarargBranch(trees*) with Grammar
 case class GrammarList(trees: List[ParsingTree])  extends ListVararg(trees) with Grammar
+case class TypeBound(bound: Terminal, separatedList: SeparatedList) extends BinaryBranch(bound, separatedList) with Grammar
 
 abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Atom
 /**
@@ -300,7 +306,7 @@ object ForStmt {
   }
 }
 
-case class WhileStmt(args: List[ParsingTree]) extends ListVararg(args) with Statement
+case class WhileStmt private (args: List[ParsingTree]) extends ListVararg(args) with Statement
 object WhileStmt {
   def apply(wle: Terminal, expr: Expression,
             indent_op: Option[Terminal], grammarList_opt: Option[GrammarList], dedent_opt: Option[Terminal]): Statement = {
@@ -314,7 +320,7 @@ object WhileStmt {
   }
 }
 
-case class IfStmt(args: List[ParsingTree]) extends ListVararg(args) with Statement
+case class IfStmt private (args: List[ParsingTree]) extends ListVararg(args) with Statement
 object IfStmt {
   // IF Expression INDENT? LIST[Statement]? DEDENT? ELSE? INDENT? LIST[Statement]? DEDENT?
 
@@ -329,10 +335,62 @@ object IfStmt {
 
 }
 
+case class VarDefStmt (variableDef: VariableDef) extends UnaryBranch(variableDef) with Statement
 
+// Definitions
+case class VariableDef private (args: List[ParsingTree]) extends ListVararg(args) with Definition
+
+object VariableDef {
+  // (VAR | VAL) IDENTIFIER COLON? NameExpression? EQUALS? Expression?
+
+  def apply(mod: Terminal, identifier: Terminal,
+            col_opt: Option[Terminal], name_opt: Option[Name], eq_opt: Option[Terminal], expr_opt: Option[Expression]): VariableDef = {
+    val opts = ListVararg.optionalVarargs(col_opt, name_opt, eq_opt, expr_opt)
+    VariableDef((mod :: identifier :: Nil) ::: opts)
+  }
+}
+
+case class ParameterDef(identifier: Terminal, colon: Terminal, name: Name) extends TernaryBranch(identifier, colon, name) with Definition
+
+case class TypeParamDef private (args: List[ParsingTree]) extends ListVararg(args) with Definition
+object TypeParamDef {
+
+  def apply(identifier: Terminal, typeBound: Option[TypeBound]): TypeParamDef = {
+    val opts = ListVararg.optionalVarargs(typeBound)
+    val other = identifier :: Nil
+
+    TypeParamDef(other ::: opts)
+  }
+}
+
+case class FunctionDef private (args: List[ParsingTree]) extends ListVararg(args) with Definition
+
+object FunctionDef {
+  def apply(list_term: GrammarList, df: Terminal, name: Terminal, op: Terminal,
+            args_op: Option[SeparatedList], cp: Terminal, colon_op: Option[Terminal], return_type: Option[Name],
+           indent_opt: Option[Terminal], body_opt: Option[GrammarList], dedent_opt: Option[Terminal]): FunctionDef = {
+    val opts = ListVararg.optionalVarargs(colon_op, return_type, indent_opt, body_opt, dedent_opt)
+    val args: List[ParsingTree] = list_term :: df :: name :: op :: args_op.toList ::: (cp :: Nil)
+
+    FunctionDef(args ::: opts)
+  }
+}
+
+case class TypeDefinition private (args: List[ParsingTree]) extends ListVararg(args) with Definition
+
+object TypeDefinition {
+  def apply(mod: Terminal, identifier: Terminal, lt_opt: Option[Terminal], params_opt: Option[SeparatedList],
+            gt_otp: Option[Terminal], bound_opt: Option[TypeBound], indent_opt: Option[Terminal], defs_opt: Option[GrammarList],
+           dedent_opt: Option[Terminal]): TypeDefinition = {
+
+    val opts = ListVararg.optionalVarargs(lt_opt, params_opt, gt_otp, bound_opt, indent_opt, defs_opt, dedent_opt)
+    val args = mod :: identifier :: Nil
+
+    TypeDefinition(args ::: opts)
+  }
+}
 // ============================= Syntax ==========================
 
-/** needed for DSL */
 trait DSLEntity {
   // TODO: def kind(): AnySyntaxKind
   def apply(tkn: Token): Terminal
@@ -384,6 +442,9 @@ case object IN            extends DSLEntity { override def apply(tkn: Token): Te
 case object BREAK         extends DSLEntity { override def apply(tkn: Token): Terminal = new BREAK(tkn) }
 case object CONTINUE      extends DSLEntity { override def apply(tkn: Token): Terminal = new CONTINUE(tkn)}
 case object RETURN        extends DSLEntity { override def apply(tkn: Token): Terminal = new RETURN(tkn)}
+case object VAL           extends DSLEntity { override def apply(tkn: Token): Terminal = new VAL(tkn) }
+case object VAR           extends DSLEntity { override def apply(tkn: Token): Terminal = new VAR(tkn) }
+case object DEF           extends DSLEntity { override def apply(tkn: Token): Terminal = new DEF(tkn) }
 
 sealed trait Symbol       extends DSLEntity
 case object DOT           extends Symbol
@@ -414,6 +475,7 @@ case object CLOSE_BRACKET extends Symbol
 case object LEFT_LEFT     extends Symbol
 case object RIGHT_RIGHT   extends Symbol
 case object BAR_BAR       extends Symbol
+case object BOUND         extends Symbol
 
 case object  AMPERSAND_AMPERSAND extends Symbol
 // TODO: add all Symbols
@@ -459,5 +521,6 @@ object Symbol {
       case ">>" => RIGHT_RIGHT
       case "&&" => AMPERSAND_AMPERSAND
       case "||" => BAR_BAR
+      case "<:" => BOUND
   }
 }
