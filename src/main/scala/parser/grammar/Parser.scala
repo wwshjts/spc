@@ -198,7 +198,6 @@ object Combinators {
         case Success(result, remain_input) => Success(result, remain_input)
         case Failure(msg) => Success(List.empty, input)
     }
-
     applyp
   }
 

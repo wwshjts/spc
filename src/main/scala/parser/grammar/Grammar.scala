@@ -32,7 +32,7 @@ object Grammar {
 
 
   def keyword_terminal: Parser[Terminal] = THIS <|> SUPER <|> NULL <|> IS <|> FOR <|> WHILE <|> IF <|> ELSE <|> IN
-  <|> BREAK <|> CONTINUE <|> RETURN <|> VAR <|> VAL
+  <|> BREAK <|> CONTINUE <|> RETURN <|> VAR <|> VAL <|> OVERRIDE <|> DEF
 
   def symbol_terminal: Parser[Terminal] = "." <|> ":" <|> "," <|> "+" <|> "-" <|> "*" <|> "/" <|> "~" <|> "%" <|> "(" <|> ")"
   <|> "[" <|> "]" <|> "&" <|> "^" <|> "|" <|> "<" <|> ">" <|> "?" <|> "!" <|> "=" <|> "==" <|> "!=" <|> "<=" <|> ">="
@@ -80,7 +80,7 @@ object Grammar {
   }
 
   def list_stmt: Parser[GrammarList] = |**(statement) ^^ GrammarList
-  def list_term: Parser[GrammarList] = |**(terminal) ^^ GrammarList
+  def list_term: Parser[GrammarList] = |**(terminal) ^^  GrammarList
   def list_def: Parser[GrammarList] =  |**(definition) ^^ GrammarList
 
   def type_bound: Parser[TypeBound]  = "<:" ~ separatedList_name_amper ^^ (parsed => TypeBound(parsed._1, parsed._2))
@@ -234,8 +234,9 @@ object Grammar {
     parsed => TypeParamDef(parsed._1, parsed._2)
   }
 
+  def func_mods: Parser[GrammarList] = |**(ABSTRACT <|> VIRTUAL <|> OVERRIDE <|> NATIVE) ^^ GrammarList
   def function_def: Parser[FunctionDef] =
-    list_term ~ DEF ~ terminal ~ "(" ~ ?(separatedList_parameterDef_comma) ~ ")" ~ ?(":") ~ ?(name) ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ { parsed =>
+    func_mods ~ DEF ~ terminal ~ "(" ~ ?(separatedList_parameterDef_comma) ~ ")" ~ ?(":") ~ ?(name) ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ { parsed =>
 
     val ((((((((((mod, df), name), op), args), cp), colon_opt), ret_type_opt), indent_opt), body_opt), dedent_opt) = parsed
 
