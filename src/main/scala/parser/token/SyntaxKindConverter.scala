@@ -35,13 +35,13 @@ object SyntaxKindConverter {
       case Keyword.RETURN => parsing_tree.RETURN
       case Keyword.BREAK => parsing_tree.BREAK
       case Keyword.CONTINUE => parsing_tree.CONTINUE
-      case Keyword.ABSTRACT => ???
-      case Keyword.VIRTUAL => ???
-      case Keyword.OVERRIDE => ???
-      case Keyword.NATIVE => ???
-      case Keyword.CLASS => ???
-      case Keyword.OBJECT => ???
-      case Keyword.INTERFACE => ???
+      case Keyword.ABSTRACT => parsing_tree.ABSTRACT
+      case Keyword.VIRTUAL => parsing_tree.VIRTUAL
+      case Keyword.OVERRIDE => parsing_tree.OVERRIDE
+      case Keyword.NATIVE => parsing_tree.NATIVE
+      case Keyword.CLASS => parsing_tree.CLASS
+      case Keyword.OBJECT => parsing_tree.OBJECT
+      case Keyword.INTERFACE => parsing_tree.INTERFACE
       case Keyword.NULL => parsing_tree.NULL
   }
 

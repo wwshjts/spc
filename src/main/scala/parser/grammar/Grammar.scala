@@ -236,6 +236,8 @@ object Grammar {
 
   def definition: Parser[Definition] = variable_def <|> parameter_def <|> type_param_def <|> function_def <|> type_def
 
+  def source_text: Parser[ParsingTree] = |**(type_def) ^^ GrammarList
+
   def _mkBinary(repr: (Expression, List[(Terminal, Expression)])): Expression = {
     val (left, kleene_star) = repr
 

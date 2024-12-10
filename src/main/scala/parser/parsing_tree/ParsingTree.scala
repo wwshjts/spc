@@ -182,6 +182,13 @@ case class RETURN(tkn: Token)         extends Leaf with Terminal(tkn)
 case class VAR(tkn: Token)            extends Leaf with Terminal(tkn)
 case class VAL(tkn: Token)            extends Leaf with Terminal(tkn)
 case class DEF(tkn: Token)            extends Leaf with Terminal(tkn)
+case class ABSTRACT(tkn: Token)       extends Leaf with Terminal(tkn)
+case class VIRTUAL(tkn: Token)        extends Leaf with Terminal(tkn)
+case class OVERRIDE(tkn: Token)       extends Leaf with Terminal(tkn)
+case class NATIVE(tkn: Token)         extends Leaf with Terminal(tkn)
+case class CLASS(tkn: Token)          extends Leaf with Terminal(tkn)
+case class OBJECT(tkn: Token)         extends Leaf with Terminal(tkn)
+case class INTERFACE(tkn: Token)      extends Leaf with Terminal(tkn)
 
 // some real shit
 case class SeparatedList(trees: ParsingTree*)     extends VarargBranch(trees*) with Grammar
@@ -440,11 +447,18 @@ case object IF            extends DSLEntity { override def apply(tkn: Token): Te
 case object ELSE          extends DSLEntity { override def apply(tkn: Token): Terminal = new ELSE(tkn) }
 case object IN            extends DSLEntity { override def apply(tkn: Token): Terminal = new IN(tkn) }
 case object BREAK         extends DSLEntity { override def apply(tkn: Token): Terminal = new BREAK(tkn) }
-case object CONTINUE      extends DSLEntity { override def apply(tkn: Token): Terminal = new CONTINUE(tkn)}
-case object RETURN        extends DSLEntity { override def apply(tkn: Token): Terminal = new RETURN(tkn)}
+case object CONTINUE      extends DSLEntity { override def apply(tkn: Token): Terminal = new CONTINUE(tkn) }
+case object RETURN        extends DSLEntity { override def apply(tkn: Token): Terminal = new RETURN(tkn) }
 case object VAL           extends DSLEntity { override def apply(tkn: Token): Terminal = new VAL(tkn) }
 case object VAR           extends DSLEntity { override def apply(tkn: Token): Terminal = new VAR(tkn) }
 case object DEF           extends DSLEntity { override def apply(tkn: Token): Terminal = new DEF(tkn) }
+case object ABSTRACT      extends DSLEntity { override def apply(tkn: Token): Terminal = new ABSTRACT(tkn) }
+case object VIRTUAL       extends DSLEntity { override def apply(tkn: Token): Terminal = new VIRTUAL(tkn) }
+case object OVERRIDE      extends DSLEntity { override def apply(tkn: Token): Terminal = new OVERRIDE(tkn) }
+case object NATIVE        extends DSLEntity { override def apply(tkn: Token): Terminal = new NATIVE(tkn) }
+case object CLASS         extends DSLEntity { override def apply(tkn: Token): Terminal = new CLASS(tkn) }
+case object OBJECT        extends DSLEntity { override def apply(tkn: Token): Terminal = new OBJECT(tkn) }
+case object INTERFACE     extends DSLEntity { override def apply(tkn: Token): Terminal = new INTERFACE(tkn) }
 
 sealed trait Symbol       extends DSLEntity
 case object DOT           extends Symbol
