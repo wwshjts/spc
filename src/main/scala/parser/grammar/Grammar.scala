@@ -5,6 +5,8 @@ import parser.parsing_tree.*
 
 import org.syspro.spc.parser.grammar.BasicLeafParser.eps
 import org.syspro.spc.parser.parsing_tree
+import syspro.tm.lexer
+import syspro.tm.lexer.SymbolToken
 
 /**
  * Grammar of SysPro lang, written in my DSL of parser combinators
@@ -27,12 +29,14 @@ object Grammar {
   def super_expr: Parser[SuperExpr]     = SUPER ^^ SuperExpr
 
   // Terminals
+
+
   def keyword_terminal: Parser[Terminal] = THIS <|> SUPER <|> NULL <|> IS <|> FOR <|> WHILE <|> IF <|> ELSE <|> IN
   <|> BREAK <|> CONTINUE <|> RETURN <|> VAR <|> VAL
 
   def symbol_terminal: Parser[Terminal] = "." <|> ":" <|> "," <|> "+" <|> "-" <|> "*" <|> "/" <|> "~" <|> "%" <|> "(" <|> ")"
-  <|> "[" <|> "]" <|> "&" <|> "^" <|> "|" <|> "<" <|> ">" <|> "?" <|> "!" <|> "=" <|> "==" <|> "!=" <|> "<=" <|> ">=" <|> "<<"
-  <|> ">>" <|> "&&" <|> "||" <|> "<:"
+  <|> "[" <|> "]" <|> "&" <|> "^" <|> "|" <|> "<" <|> ">" <|> "?" <|> "!" <|> "=" <|> "==" <|> "!=" <|> "<=" <|> ">="
+  <|> "&&" <|> "||" <|> "<:"
 
   def terminal: Parser[Terminal] = BAD <|> INDENT <|> DEDENT <|> IDENTIFIER <|> RUNE <|> BOOLEAN <|> INTEGER <|> STRING
   <|> keyword_terminal <|> symbol_terminal
@@ -126,7 +130,20 @@ object Grammar {
   def term: Parser[Expression]   = factor ~ *?(("+" <|> "-" <|> "%") ~ factor) ^^ _mkBinary
 
   // **** Priority 4 ****
-  def shift: Parser[Expression] = term ~ *?(("<<" <|> ">>")  ~ term) ^^ _mkBinary
+
+  // My lexer doesn't produce "<<" token, it recognises this sequence of symbols as sequence of tokens
+  def left_left: Parser[Terminal] = "<" ~ "<" ^^ { parsed =>
+    val (left, right) = parsed
+    LEFT_LEFT(new SymbolToken(left.token().start, right.token().end, left.token().leadingTriviaLength, right.token().trailingTriviaLength, lexer.Symbol.LESS_THAN_LESS_THAN))
+  }
+
+  // My lexer doesn't produce ">>" token, it recognises this sequence of symbols as sequence of tokens
+  def right_right: Parser[Terminal] = ">" ~ ">" ^^ { parsed =>
+    val (left, right) = parsed
+    RIGHT_RIGHT(new SymbolToken(left.token().start, right.token().end, left.token().leadingTriviaLength, right.token().trailingTriviaLength, lexer.Symbol.GREATER_THAN_GREATER_THAN))
+  }
+
+  def shift: Parser[Expression] = term ~ *?((left_left <|> right_right)  ~ term) ^^ _mkBinary
 
   // **** Priority 5 ****
   def bitwiseAnd: Parser[Expression] = shift ~ *?("&" ~ shift) ^^ _mkBinary
