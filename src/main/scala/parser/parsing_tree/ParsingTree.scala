@@ -360,19 +360,19 @@ case class VariableDef private (args: List[ParsingTree]) extends ListVararg(args
 
 object VariableDef {
   // (VAR | VAL) IDENTIFIER COLON? NameExpression? EQUALS? Expression?
+  def apply(mod: Terminal, identifier: Terminal, type_opt: Option[(Terminal, Name)], assignment_opt: Option[(Terminal, Expression)]): VariableDef = {
+    val type_name: List[ParsingTree] = type_opt.map(t => t._1 :: t._2 :: Nil).getOrElse(List.empty)
+    val assignment: List[ParsingTree] = assignment_opt.map(t => t._1 :: t._2 :: Nil).getOrElse(List.empty)
 
-  def apply(mod: Terminal, identifier: Terminal,
-            col_opt: Option[Terminal], name_opt: Option[Name], eq_opt: Option[Terminal], expr_opt: Option[Expression]): VariableDef = {
-    val opts = ListVararg.optionalVarargs(col_opt, name_opt, eq_opt, expr_opt)
-    VariableDef((mod :: identifier :: Nil) ::: opts)
+    VariableDef(mod :: identifier :: (type_name ::: assignment))
   }
 }
 
 case class ParameterDef(identifier: Terminal, colon: Terminal, name: Name) extends TernaryBranch(identifier, colon, name) with Definition
 
 case class TypeParamDef private (args: List[ParsingTree]) extends ListVararg(args) with Definition
-object TypeParamDef {
 
+object TypeParamDef {
   def apply(identifier: Terminal, typeBound: Option[TypeBound]): TypeParamDef = {
     val opts = ListVararg.optionalVarargs(typeBound)
     val other = identifier :: Nil
@@ -384,24 +384,22 @@ object TypeParamDef {
 case class FunctionDef private (args: List[ParsingTree]) extends ListVararg(args) with Definition
 
 object FunctionDef {
-  def apply(list_term: GrammarList, df: Terminal, name: Terminal, op: Terminal,
-            args_op: Option[SeparatedList], cp: Terminal, colon_op: Option[Terminal], return_type: Option[Name],
-           indent_opt: Option[Terminal], body_opt: Option[GrammarList], dedent_opt: Option[Terminal]): FunctionDef = {
-    val opts = ListVararg.optionalVarargs(colon_op, return_type, indent_opt, body_opt, dedent_opt)
-    val args: List[ParsingTree] = list_term :: df :: name :: op :: args_op.toList ::: (cp :: Nil)
+  def apply(modifiers: GrammarList, definition: Terminal, name: Terminal, lp: Terminal, args_opt: Option[SeparatedList], rp: Terminal, ret_type_opt: Option[(Terminal, Name)], block: Option[Block]): FunctionDef = {
+    val args = args_opt.toList
+    val ret_type = ret_type_opt.map(rt => rt._1 :: rt._2 :: Nil).getOrElse(List.empty)
+    val body = block.map(_.toList).getOrElse(List.empty)
 
-    FunctionDef(args ::: opts)
+    FunctionDef((modifiers :: definition :: name :: lp :: args) ::: (rp :: ret_type ::: body))
   }
 }
 
 case class TypeDefinition private (args: List[ParsingTree]) extends ListVararg(args) with Definition
 
 object TypeDefinition {
-  def apply(mod: Terminal, identifier: Terminal, lt_opt: Option[Terminal], params_opt: Option[SeparatedList],
-            gt_otp: Option[Terminal], bound_opt: Option[TypeBound], indent_opt: Option[Terminal], defs_opt: Option[GrammarList],
-           dedent_opt: Option[Terminal]): TypeDefinition = {
+  // TODO: see todo in grammar on this rule
+  def apply(mod: Terminal, identifier: Terminal, params_opt: List[ParsingTree], bound_opt: Option[TypeBound], block: Option[Block]): TypeDefinition = {
 
-    val opts = ListVararg.optionalVarargs(lt_opt, params_opt, gt_otp, bound_opt, indent_opt, defs_opt, dedent_opt)
+    val opts = params_opt :::  bound_opt.toList ::: block.map(_.toList).getOrElse(List.empty)
     val args = mod :: identifier :: Nil
 
     TypeDefinition(args ::: opts)

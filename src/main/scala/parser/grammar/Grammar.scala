@@ -74,14 +74,10 @@ object Grammar {
     SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse *)
   }
 
-  def separatedList_typeParameterDef_comma: Parser[SeparatedList] = *?(type_param_def ~ ",") ~ parameter_def ^^ { parsed =>
+  def separatedList_typeParameterDef_comma: Parser[SeparatedList] = *?(type_param_def ~ ",") ~ type_param_def ^^ { parsed =>
     val (list, comma) = parsed
     SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse *)
   }
-
-  def list_stmt: Parser[GrammarList] = |**(statement) ^^ GrammarList
-  def list_term: Parser[GrammarList] = |**(terminal) ^^  GrammarList
-  def list_def: Parser[GrammarList] =  |**(definition) ^^ GrammarList
 
   def type_bound: Parser[TypeBound]  = "<:" ~ separatedList_name_amper ^^ (parsed => TypeBound(parsed._1, parsed._2))
 
@@ -219,11 +215,11 @@ object Grammar {
                                     <|> continue_stmt <|> expression_stmt <|> variable_def_stmt
 
   // **** Definitions ****
-  def variable_def: Parser[VariableDef] = (VAL <|> VAR) ~ IDENTIFIER ~ ?(COLON) ~ ?(name) ~ ?("=") ~ ?(expression) ^^ (
-    parsed =>
-      val (((((md, identifier), colon_opt), name_opt), eq_opt), expr_opt) = parsed
-      VariableDef(md, identifier, colon_opt, name_opt, eq_opt, expr_opt)
-  )
+  def variable_def: Parser[VariableDef] = (VAL <|> VAR) ~ IDENTIFIER ~ ?(COLON ~ name) ~ ?("=" ~ expression) ^^ { parsed =>
+      val (((md, identifier), type_name), assignment_opt) = parsed
+
+      VariableDef(md, identifier, type_name, assignment_opt)
+  }
 
   def parameter_def: Parser[Definition] = IDENTIFIER ~ COLON ~ name ^^ {
     parsed =>
@@ -235,25 +231,25 @@ object Grammar {
     parsed => TypeParamDef(parsed._1, parsed._2)
   }
 
-  def func_mods: Parser[GrammarList] = |**(ABSTRACT <|> VIRTUAL <|> OVERRIDE <|> NATIVE) ^^ GrammarList
+  def func_mods: Parser[GrammarList] = *?(ABSTRACT <|> VIRTUAL <|> OVERRIDE <|> NATIVE) ^^ GrammarList
   def function_def: Parser[FunctionDef] =
-    func_mods ~ DEF ~ terminal ~ "(" ~ ?(separatedList_parameterDef_comma) ~ ")" ~ ?(":") ~ ?(name) ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ { parsed =>
+    func_mods ~ DEF ~ (IDENTIFIER <|> THIS) ~ "(" ~ ?(separatedList_parameterDef_comma) ~ ")" ~ ?(":" ~ name) ~ ?(block(statement)) ^^ { parsed =>
 
-    val ((((((((((mod, df), name), op), args), cp), colon_opt), ret_type_opt), indent_opt), body_opt), dedent_opt) = parsed
+    val (((((((mod, df), name), op), args), cp), ret_type_opt), body) = parsed
 
-    FunctionDef(mod, df, name, op, args, cp, colon_opt, ret_type_opt, indent_opt, body_opt, dedent_opt)
+    FunctionDef(mod, df, name, op, args, cp, ret_type_opt, body)
   }
 
-  // Terminal IDENTIFIER LESS_THAN? SEPARATED_LIST[TYPE_PARAMETER_DEFINITION, COMMA]? GREATER_THAN? TYPE_BOUND? INDENT? LIST[Definition]? DEDENT?
-  def type_def: Parser[TypeDefinition] =
-    terminal ~ IDENTIFIER ~ ?("<") ~ ?(separatedList_typeParameterDef_comma) ~ ?(">") ~ ?(type_bound) ~ ?(INDENT) ~ ?(list_def) ~ ?(DEDENT) ^^ { parsed =>
+  def type_def: Parser[TypeDefinition] = (CLASS <|> OBJECT <|> INTERFACE) ~
+    IDENTIFIER ~ ?("<" ~ separatedList_typeParameterDef_comma ~ ">") ~ ?(type_bound) ~ ?(block(function_def <|> variable_def)) ^^ { parsed =>
 
-    val ((((((((mod, name), lt_opt), params_opt), gt_opt), bound_opt), indent_opt), defs_opt), dedent_opt) = parsed
+    // TODO: merge Separated list and grammar list nodes add seplist block to rule
+    val ((((mod, name), seplist_opt), bound_opt), block)  = parsed
 
-    TypeDefinition(mod, name, lt_opt, params_opt, gt_opt, bound_opt, indent_opt, defs_opt, dedent_opt)
+    val sepList = seplist_opt.map(p => p._1._1 :: p._1._2 :: p._2 :: Nil).getOrElse(List.empty)
+
+    TypeDefinition(mod, name, sepList, bound_opt, block)
   }
-
-  def definition: Parser[Definition] = variable_def <|> parameter_def <|> type_param_def <|> function_def <|> type_def
 
   def source_text: Parser[ParsingTree] = |**(type_def) ^^ GrammarList
 

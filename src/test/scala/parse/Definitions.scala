@@ -34,11 +34,29 @@ class Definitions extends AnyFunSuite{
     val input = Lexer(
       """
         |override def foo(): Unit
-        |   println("foo")
+        |  println("foo")
         |""".stripMargin)
 
     val res = function_def(input)
 
+    println(res)
+  }
+
+  test("type") {
+    val input = Lexer(
+      """
+        |class Box<T>
+        |  def this(element: T): Box<T>
+        |     val _element: T = element
+        |  def get(): T
+        |    return _element
+        |""".stripMargin
+    )
+
+    println(input)
+
+
+    val res = source_text(input)
     println(res)
   }
 }
