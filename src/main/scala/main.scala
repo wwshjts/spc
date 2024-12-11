@@ -8,8 +8,8 @@ import syspro.tm.lexer.TestMode
 @main
 def main(): Unit = {
   //Tasks.Lexer.registerSolution(new SpcLexer(),  new TestMode().strict(true))
-  WebServer.start()
+//  WebServer.start()
   Tasks.Parser.registerSolution(Grammar)
-  WebServer.waitForWebServerExit()
+//  WebServer.waitForWebServerExit()
 }
 

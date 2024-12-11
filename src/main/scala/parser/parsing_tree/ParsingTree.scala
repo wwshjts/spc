@@ -57,7 +57,7 @@ sealed trait TernaryBranch(first: ParsingTree, second: ParsingTree, third: Parsi
   override def apply(index: Int): Option[ParsingTree] = index match
     case 0 => Some(first)
     case 1 => Some(second)
-    case 3 => Some(third)
+    case 2 => Some(third)
     case _ => None
 
   override def rank(): Int = 3
@@ -93,8 +93,7 @@ sealed trait Leaf extends Tree {
 
 // ------------------ Grammar ------------------
 sealed trait Grammar extends ParsingTree {
-  override def kind(): SyntaxKind = ???
-  def token(): Token = null
+  override def token(): Token = null
 }
 
 /**
@@ -404,6 +403,8 @@ object TypeDefinition {
     TypeDefinition(args ::: opts)
   }
 }
+
+case class SourceText (text: GrammarList) extends Grammar with UnaryBranch(text)
 // ============================= Syntax ==========================
 
 trait DSLEntity {

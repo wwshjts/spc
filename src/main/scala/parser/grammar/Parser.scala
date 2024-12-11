@@ -14,18 +14,22 @@ import scala.collection.mutable.ListBuffer
 sealed trait Result[+A] {
   def map[U](f: A => U): Result[U]
   def get: A
+  def remain: List[Token]
 }
 
 case class Success[+A](result: A, remain_input: List[Token]) extends Result[A] {
   override def map[U](f: A => U): Result[U] = Success(f(result), remain_input)
 
   override def get: A = result
+  override def remain: List[Token] = remain_input
 }
 
-case class Failure(msg: Predef.String) extends Result[Nothing] {
-  override def map[U](f: Nothing => U): Result[U] = Failure(msg)
+case class Failure(msg: Predef.String, remain_input: List[Token]) extends Result[Nothing] {
+  override def map[U](f: Nothing => U): Result[U] = Failure(msg, remain_input)
 
   override def get: Nothing = ???
+
+  override def remain: List[Token] = remain_input
 }
 
 /*
@@ -70,11 +74,11 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
       val res_a = a(input)
 
       res_a match {
-        case Failure(msg) => Failure(msg)
+        case Failure(msg, remain_input) => Failure(msg, remain_input)
         case Success(ir_a, remain_input_a) => {
           val res_b = b(remain_input_a)
           res_b match {
-            case Failure(msg) => Failure(msg)
+            case Failure(msg, remain_input) => Failure(msg, remain_input)
             case Success(ir_b, remain_input_b) => Success((ir_a, ir_b), remain_input_b)
           }
         }
@@ -90,12 +94,12 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
       val res_a = a(input)
 
       res_a match {
-        case Failure(msg) => Failure(msg)
+        case Failure(msg, remain_input) => Failure(msg, remain_input)
         case Success(ir_a, remain_input_a) => {
           val res_b = b(remain_input_a)
 
           res_b match {
-            case Failure(msg) => Failure(msg)
+            case Failure(msg, remain_input) => Failure(msg, remain_input)
             case Success(ir_b, remain_input_b) => Success(ir_b, remain_input_b)
           }
         }
@@ -110,12 +114,12 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
       val res_a = a(input)
 
       res_a match {
-        case Failure(msg) => Failure(msg)
+        case Failure(msg, remain_input) => Failure(msg, remain_input)
         case Success(ir_a, remain_input_a) => {
           val res_b = b(remain_input_a)
 
           res_b match {
-            case Failure(msg) => Failure(msg)
+            case Failure(msg, remain_input) => Failure(msg, remain_input)
             case Success(ir_b, remain_input_b) => Success(ir_a, remain_input_b)
           }
         }
@@ -138,7 +142,7 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
 
       res_a match
         case Success(_, _) => res_a
-        case Failure(msg) => b(input)
+        case Failure(_, _) => b(input)
     }
   }
 
@@ -150,7 +154,7 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
 
       res match
         case Success(result, remain_input) => Success(f(result), remain_input)
-        case Failure(msg) => Failure(msg)
+        case Failure(msg, remain_input) => Failure(msg, remain_input)
     }
   }
   
@@ -196,7 +200,7 @@ object Combinators {
     def applyp(input: List[Token]): Result[List[A]] = {
       |**(p)(input) match
         case Success(result, remain_input) => Success(result, remain_input)
-        case Failure(msg) => Success(List.empty, input)
+        case Failure(msg, remain_input) => Success(List.empty, input)
     }
     applyp
   }
@@ -226,7 +230,7 @@ object Combinators {
       case Success(result, remain_input) =>
         continue(remain_input) match
           case Success(r1, remain_input) => Success((result, r1), remain_input)
-      case f @ Failure(msg) => f
+      case f @ Failure(msg, remain_input) => f
     }
   }
 
@@ -237,7 +241,7 @@ object Combinators {
     (input: List[Token]) => {
       p(input) match
         case Success(result, remain_input) => Success(Some(result), remain_input)
-        case Failure(msg) => Success(None, input)
+        case Failure(msg, _) => Success(None, input)
     }
   }
 
@@ -247,7 +251,7 @@ object Parser {
   def consume[A](input: List[Token])(consumer: Token => Result[A]): Result[A] = {
     input match
       case token :: tail => consumer(token)
-      case _ => Failure("Eof")
+      case _ => Failure("Eof", input)
   }
 }
 
@@ -264,7 +268,7 @@ object BasicLeafParser {
       Parser.consume(input) { (token: Token) =>
 
         val syntax = SyntaxKindConverter(token)
-        if (syntax == toMatch) Success(toMatch(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax\n state $input")
+        if (syntax == toMatch) Success(toMatch(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax\n state $input", input)
       }
     }
   }

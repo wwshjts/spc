@@ -6,9 +6,13 @@ import parser.parsing_tree.*
 import org.syspro.spc.lexer.Lexer
 import org.syspro.spc.parser.grammar.BasicLeafParser.eps
 import org.syspro.spc.parser.parsing_tree
-import syspro.tm.lexer
+import syspro.tm.{WebServer, lexer}
 import syspro.tm.lexer.SymbolToken
 import syspro.tm.parser.{Diagnostic, ParseResult, SyntaxNode, TextSpan}
+
+import scala.collection.mutable.ListBuffer
+import scala.jdk.CollectionConverters.*
+
 
 /**
  * Grammar of SysPro lang, written in my DSL of parser combinators
@@ -253,7 +257,9 @@ object Grammar extends syspro.tm.parser.Parser {
     TypeDefinition(mod, name, sepList, bound_opt, block)
   }
 
-  def source_text: Parser[ParsingTree] = |**(type_def) ^^ GrammarList
+  def source_text: Parser[ParsingTree] = |**(type_def) ^^ { parsed =>
+    SourceText(GrammarList(parsed))
+  }
 
   def block[A <: ParsingTree](p: Parser[A]): Parser[Block] = INDENT ~ (|**(p) ^^ GrammarList) ~ DEDENT ^^ { parsed =>
     val ((indent, list), dedent) = parsed
@@ -333,8 +339,22 @@ object Grammar extends syspro.tm.parser.Parser {
   case class PResult(root: SyntaxNode, invalidRanges: java.util.List[TextSpan], diagnostics: java.util.List[Diagnostic]) extends ParseResult
   override def parse(s: String): ParseResult = {
     val res = source_text(Lexer(s))
+
+    var tree: SyntaxNode = null
+    val invalidRanges = res match
+      case Success(result, remain_input) =>
+        tree = res.get
+        if (res.remain.nonEmpty)
+          (new TextSpan(res.remain.head.start, res.remain.last.end)) :: Nil
+        else
+          List.empty
+      case Failure(msg, remain_input) =>
+        tree = SourceText(GrammarList(List.empty))
+        (new TextSpan(res.remain.head.start, res.remain.last.end)) :: Nil
+
+
     println(s)
-    println(res)
-    PResult(res.get, null, null)
+    PResult(res.get, invalidRanges.asJava, List.empty.asJava)
+    //PResult(res.get, null, null)
   }
 }
