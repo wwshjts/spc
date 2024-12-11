@@ -3,15 +3,17 @@ package parser.grammar
 
 import parser.parsing_tree.*
 
+import org.syspro.spc.lexer.Lexer
 import org.syspro.spc.parser.grammar.BasicLeafParser.eps
 import org.syspro.spc.parser.parsing_tree
 import syspro.tm.lexer
 import syspro.tm.lexer.SymbolToken
+import syspro.tm.parser.{Diagnostic, ParseResult, SyntaxNode, TextSpan}
 
 /**
  * Grammar of SysPro lang, written in my DSL of parser combinators
  */
-object Grammar {
+object Grammar extends syspro.tm.parser.Parser {
 
   import BasicLeafParser.{given_Conversion_String_Parser, given_Conversion_DSLEntity_Parser}
   import Combinators.*
@@ -328,5 +330,11 @@ object Grammar {
 
   case class InvokeContainer(lb: Terminal, sep_list: SeparatedList, rb: Terminal) extends PrimaryContainer
 
-
+  case class PResult(root: SyntaxNode, invalidRanges: java.util.List[TextSpan], diagnostics: java.util.List[Diagnostic]) extends ParseResult
+  override def parse(s: String): ParseResult = {
+    val res = source_text(Lexer(s))
+    println(s)
+    println(res)
+    PResult(res.get, null, null)
+  }
 }

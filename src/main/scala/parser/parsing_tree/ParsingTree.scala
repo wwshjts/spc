@@ -2,6 +2,7 @@ package org.syspro.spc
 package parser.parsing_tree
 
 import org.syspro.spc.parser.parsing_tree
+import org.syspro.spc.parser.token.ParsingTreeConverter
 import org.w3c.dom.css.Counter
 import syspro.tm.lexer.Token
 import syspro.tm.parser.{AnySyntaxKind, SyntaxKind, SyntaxNode}
@@ -22,7 +23,7 @@ sealed trait ParsingTree extends SyntaxNode {
   def rank(): Int
   def token(): Token
 
-  override def kind(): SyntaxKind = ???
+  override def kind(): AnySyntaxKind = ParsingTreeConverter(this)
   override def slotCount(): Int = rank()
   override def slot(i: Int): SyntaxNode = apply(i).get
 }
@@ -111,8 +112,6 @@ sealed trait Atom extends Primary
 sealed trait Primary extends Expression
 
 sealed trait Name extends Primary
-
-sealed trait BinaryExpr extends Expression
 
 sealed trait Statement extends Grammar
 
@@ -204,11 +203,11 @@ case class SeparatedList(trees: ParsingTree*)     extends VarargBranch(trees*) w
 case class GrammarList(trees: List[ParsingTree])  extends ListVararg(trees) with Grammar
 case class TypeBound(bound: Terminal, separatedList: SeparatedList) extends BinaryBranch(bound, separatedList) with Grammar
 
-abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Atom
+sealed abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Atom
 /**
  * Trait which specify branch with only one descendant
  */
-abstract class UnaryExpr(operation: Terminal, operand: ParsingTree) extends BinaryBranch(operation, operand) with Expression {}
+sealed abstract class UnaryExpr(operation: Terminal, operand: ParsingTree) extends BinaryBranch(operation, operand) with Expression {}
 
 case class Negate(operation: Terminal, operand: ParsingTree)       extends UnaryExpr(operation, operand)
 case class UPlus(operation: Terminal, operand: ParsingTree)        extends UnaryExpr(operation, operand)
@@ -238,7 +237,7 @@ case object IsExpression {
   def apply(expr: ParsingTree, is: Terminal, name_expr: Name, opt: Terminal) = new IsExpression(expr, is, name_expr, opt)
 }
 
-abstract class BinaryExpression(left: ParsingTree, op: Terminal, right: ParsingTree) extends TernaryBranch(left, op, right) with Expression {}
+sealed abstract class BinaryExpression(left: ParsingTree, op: Terminal, right: ParsingTree) extends TernaryBranch(left, op, right) with Expression {}
 
 case class ADD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
 case class SUBTRACT(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
