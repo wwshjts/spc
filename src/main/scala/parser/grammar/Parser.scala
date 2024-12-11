@@ -1,14 +1,40 @@
 package org.syspro.spc
 package parser.grammar
 
-import org.syspro.spc.parser.parsing_tree.{Leaf, ParsingTree}
+import org.syspro.spc.parser.parsing_tree.DSLEntity
+
+import scala.Conversion
+import org.syspro.spc.parser.parsing_tree.*
+import org.syspro.spc.parser.token.SyntaxKindConverter
 import syspro.tm.lexer.Token
-import syspro.tm.parser.{AnySyntaxKind, SyntaxKind}
 
-sealed trait Result {}
-case class Success(parsingTree: ParsingTree, remaining_input: List[Token]) extends Result
-case class Failure() extends Result
+import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
 
+sealed trait Result[+A] {
+  def map[U](f: A => U): Result[U]
+  def get: A
+}
+
+case class Success[+A](result: A, remain_input: List[Token]) extends Result[A] {
+  override def map[U](f: A => U): Result[U] = Success(f(result), remain_input)
+
+  override def get: A = result
+}
+
+case class Failure(msg: Predef.String) extends Result[Nothing] {
+  override def map[U](f: Nothing => U): Result[U] = Failure(msg)
+
+  override def get: Nothing = ???
+}
+
+/*
+enum Result[+A] {
+  case Success(result: A, remain_input: List[Token])
+  case Failure(msg: Predef.String)
+  // TODO for better ERROR handling maybe I should add Fatal here
+}
+ */
 
 /**
  * A parser for things
@@ -18,79 +44,243 @@ case class Failure() extends Result
  * To lists of pairs
  *
  * of things and syspro.tm.lexer.Token
+ *
+ * Very simple combinator lib, literally dsl for recursive descending parsing
+ *
+ * Doesn't support packard parsing, or other methods of eliminating left recursion,
+ * so you need to eliminate left recursion in your grammar to use this lib
+ * @tparam A Return type of parser
  */
-trait Parser extends (List[Token] => Result) {
+trait Parser[+A] extends (List[Token] => Result[A]) {
 
-  def apply(input: List[Token]): Result
+  def apply(input: List[Token]): Result[A]
 
-  // TODO: make error handling
-}
+  /**
+   * Simple andThen combinator
+   *
+   * If parser this succeeds, then runs parser b on the remaining input
+   * @param b parser which runs after Success of 'this' parser
+   * @tparam U thing, that parser p parse
+   * @return parser which parse (A, U)
+   */
+  def ~[U](b: => Parser[U]): Parser[(A, U)] = {
+    val a: Parser[A] = this // just for beauty of code
 
-object ParserCombinators {
-  extension (input: List[Token])
-    def >>(parser: Parser): Result = parser(input)
+    (input: List[Token]) => {
+      val res_a = a(input)
 
-  extension (a: Parser)
-    def ~>(b: Parser): Parser = {
-      (input: List[Token]) => {
-        val res_a = a(input)
-
-        res_a match {
-          case Failure() => Failure()
-          case Success(tree, remaining_input) => b(remaining_input)
+      res_a match {
+        case Failure(msg) => Failure(msg)
+        case Success(ir_a, remain_input_a) => {
+          val res_b = b(remain_input_a)
+          res_b match {
+            case Failure(msg) => Failure(msg)
+            case Success(ir_b, remain_input_b) => Success((ir_a, ir_b), remain_input_b)
+          }
         }
       }
     }
-}
+  }
 
+  // TODO: doc
+  def ~>[U](b: => Parser[U]): Parser[U] = {
+    val a: Parser[A] = this // just for beauty of code
 
-trait ParserFactory {
-  def apply(syntaxKind: AnySyntaxKind): Parser
-}
-
-object ParseTerminal extends ParserFactory {
-  def apply(syntaxKind: AnySyntaxKind): Parser = {
     (input: List[Token]) => {
-      val tkn: Token = input.head
-      println(input)
+      val res_a = a(input)
 
-      println(tkn)
+      res_a match {
+        case Failure(msg) => Failure(msg)
+        case Success(ir_a, remain_input_a) => {
+          val res_b = b(remain_input_a)
 
-      if (syntaxKind == tkn.toSyntaxKind) Success(Leaf(syntaxKind, tkn), input.tail) else Failure()
+          res_b match {
+            case Failure(msg) => Failure(msg)
+            case Success(ir_b, remain_input_b) => Success(ir_b, remain_input_b)
+          }
+        }
+      }
     }
   }
+
+  def <~[U](b: => Parser[U]): Parser[A] = {
+    val a: Parser[A] = this // just for beauty of code
+
+    (input: List[Token]) => {
+      val res_a = a(input)
+
+      res_a match {
+        case Failure(msg) => Failure(msg)
+        case Success(ir_a, remain_input_a) => {
+          val res_b = b(remain_input_a)
+
+          res_b match {
+            case Failure(msg) => Failure(msg)
+            case Success(ir_b, remain_input_b) => Success(ir_a, remain_input_b)
+          }
+        }
+      }
+    }
+  }
+
+
+  /**
+   * orElse parser combinator
+   * @tparam U should be super type of this parser type parameter
+   * @return result of first parser if it succeeds, else if b succeeds returns result of b,
+   *         otherwise fails
+   */
+  def <|> [U >: A](b: => Parser[U]): Parser[U] = {
+    val a: Parser[A] = this // just for code beauty
+
+    (input: List[Token]) => {
+      val res_a = a(input)
+
+      res_a match
+        case Success(_, _) => res_a
+        case Failure(msg) => b(input)
+    }
+  }
+
+  def map[U](f: A => U): Parser[U] = {
+    val parser: Parser[A] = this // just for code beauty
+
+    (input: List[Token]) => {
+      val res = parser(input)
+
+      res match
+        case Success(result, remain_input) => Success(f(result), remain_input)
+        case Failure(msg) => Failure(msg)
+    }
+  }
+  
+  def flatMap[U](f: A => Parser[U]): Parser[U] = {
+    ???
+  }
+  
+  /*
+  problem I had parser of lists of pairs
+  I need list of parsers of pairs
+  Parser
+  def ^^^[A](): Parser[List[A]] => List[Parser[A]]
+   */
+
+
+  /**
+   * Map parser combinator
+   * @param A
+   * @tparam U
+   * @return
+   */
+  def ^^[U] (f: A => U): Parser[U] = map(f)
+
+  // TODO: add do notation here
+  // apply this parser to input while parser succeeds and input has tokens
+  // А вот че за параметр A должен возвращать do Комбинатор???
+
+
+  // TODO: make nice error handling can I?
 }
 
-object ParseOp extends ParserFactory {
-  override def apply(syntaxKind: AnySyntaxKind): Parser = {
+object Combinators {
+  def **[A](p: => Parser[A]): Parser[(A, List[A])] = repeatAtLeastOnce(p)
+
+  def |**[A](p: => Parser[A]): Parser[List[A]] = repeatAtLeastOnce(p) ^^ ({
+    case (head, tail) => head :: tail
+  }
+    )
+
+  def *?[A](p: => Parser[A]): Parser[List[A]] = repeat(p)
+
+  def repeat[A](p: => Parser[A]): Parser[List[A]] = {
+    def applyp(input: List[Token]): Result[List[A]] = {
+      |**(p)(input) match
+        case Success(result, remain_input) => Success(result, remain_input)
+        case Failure(msg) => Success(List.empty, input)
+    }
+    applyp
+  }
+
+  def repeatAtLeastOnce[A](p: => Parser[A]): Parser[(A, List[A])] = repeatAtLeastOnce(p, p)
+
+  def repeatAtLeastOnce[A](first: => Parser[A], p0: => Parser[A]): Parser[(A, List[A])] = { (in: List[Token]) =>
+    lazy val p = p0
+    val elems = new ListBuffer[A]
+
+    def continue(in: List[Token]): Success[List[A]] = {
+      val p0 = p
+      @tailrec def applyp(in0: List[Token]): Success[List[A]] =
+        if (in0.isEmpty) return Success(elems.toList, in0)
+        p0(in0) match {
+        case Success(result, remain_input) =>
+          elems += result
+          applyp(remain_input)
+
+        case f: Failure => Success(elems.toList, in0)
+      }
+
+      applyp(in)
+    }
+
+    first(in) match {
+      case Success(result, remain_input) =>
+        continue(remain_input) match
+          case Success(r1, remain_input) => Success((result, r1), remain_input)
+      case f @ Failure(msg) => f
+    }
+  }
+
+  def ?[A](p: => Parser[A]): Parser[Option[A]] = has(p)
+
+  /** Matches expression that p matches, or returns empty list */
+  def has[A](p: => Parser[A]): Parser[Option[A]] = {
     (input: List[Token]) => {
-      val tkn: Token = input.head
-      println(input)
+      p(input) match
+        case Success(result, remain_input) => Success(Some(result), remain_input)
+        case Failure(msg) => Success(None, input)
+    }
+  }
 
-      println(tkn)
+}
 
-      if (syntaxKind == tkn.toSyntaxKind) Success(Leaf(syntaxKind, tkn), input.tail) else Failure()
+object Parser {
+  def consume[A](input: List[Token])(consumer: Token => Result[A]): Result[A] = {
+    input match
+      case token :: tail => consumer(token)
+      case _ => Failure("Eof")
   }
 }
 
 
-val integer   = ParseTerminal(SyntaxKind.INTEGER)
-val boolean   = ParseTerminal(SyntaxKind.BOOLEAN)
-val string    = ParseTerminal(SyntaxKind.STRING)
-val rune      = ParseTerminal(SyntaxKind.RUNE)
+// TODO: add doc
+object BasicLeafParser {
+  /**
+   * @param toMatch syntax of consumed token
+   * @return parser, that consumes one input terminal token, return Leaf node for this token
+   */
+  def apply(toMatch: DSLEntity): Parser[Terminal] = {
 
-val ident     = ParseTerminal(SyntaxKind.INDENT)
-val dedent    = ParseTerminal(SyntaxKind.DEDENT)
+    (input: List[Token]) => {
+      Parser.consume(input) { (token: Token) =>
 
-val bad       = ParseTerminal(SyntaxKind.BAD)
+        val syntax = SyntaxKindConverter(token)
+        if (syntax == toMatch) Success(toMatch(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax\n state $input")
+      }
+    }
+  }
 
-val add       = ParseOp(syspro.tm.lexer.Symbol.PLUS)
+  /** Parser, that always succeeds. Doesn't consume any tokens */
+  def eps[A]: Parser[A] = {
+    (input: List[Token]) => {
+      Success(???, input)
+    }
+  }
 
-/*
-val expr = integer | boolean | ... | bad
-val add_expr =  (expr ~> add) <~ expr
-input = 12 + 13
-Branch( Plus
-Left(12), Right(13) )
-parser
- */
+  // Conversion from String, eah, type will be deduced to Terminal
+  given Conversion[Predef.String, Parser[Terminal]] with
+    def apply(symbol: Predef.String): Parser[Terminal] = BasicLeafParser(Symbol(symbol))
+
+  given Conversion[DSLEntity, Parser[Terminal]] with
+    def apply(entity: DSLEntity): Parser[Terminal] = BasicLeafParser(entity)
+
+}
