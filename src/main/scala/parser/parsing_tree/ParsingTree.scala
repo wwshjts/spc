@@ -117,6 +117,15 @@ sealed trait BinaryExpr extends Expression
 sealed trait Statement extends Grammar
 
 sealed trait Definition extends Grammar
+
+/**
+ *
+ * Should represent supplementary grammar rules such as blocks
+ *
+ */
+sealed trait Supplementary extends Grammar {
+  override def kind(): SyntaxKind = throw new IllegalAccessException("Supplementary node doesn't correspond to syntax kind")
+}
 // ---------------------------------------------
 
 
@@ -214,20 +223,6 @@ case class ThisExpr(op: Terminal)               extends LiteralExpr(op)
 case class SuperExpr(op: Terminal)              extends LiteralExpr(op)
 case class NullLiteral(op: Terminal)            extends LiteralExpr(op)
 
-case class BreakStmt(op: Terminal)              extends UnaryBranch(op) with Statement
-
-case class ContinueStmt(op: Terminal)           extends UnaryBranch(op) with Statement
-
-case class ReturnStmt(args: List[ParsingTree])  extends ListVararg(args) with Statement
-case object ReturnStmt {
-  def apply(op: Terminal, ret_val: Option[Expression]): Statement = {
-    val opts: List[Expression] = if (ret_val.isDefined) List(ret_val.get) else List()
-    ReturnStmt(op :: opts)
-  }
-}
-
-case class ExprStmt(expr: Expression)           extends UnaryBranch(expr) with Statement
-
 case class IdentifierName(op: Terminal)                 extends UnaryBranch(op) with Name
 case class OptionName(op: Terminal, name: ParsingTree)  extends BinaryBranch(op, name) with Name
 case class GenericName(i: Terminal, l: Terminal, separatedList: SeparatedList, r: Terminal) extends VarargBranch(i, l, separatedList, r) with Name
@@ -296,48 +291,64 @@ object BinaryExpression {
 }
 
 // Statements
+case class BreakStmt(op: Terminal) extends UnaryBranch(op) with Statement
+
+case class ContinueStmt(op: Terminal) extends UnaryBranch(op) with Statement
+
+case class ReturnStmt(args: List[ParsingTree]) extends ListVararg(args) with Statement
+
+case object ReturnStmt {
+  def apply(op: Terminal, ret_val: Option[Expression]): Statement = {
+    val opts: List[Expression] = if (ret_val.isDefined) List(ret_val.get) else List()
+    ReturnStmt(op :: opts)
+  }
+}
+
+case class ExprStmt(expr: Expression) extends UnaryBranch(expr) with Statement
+
 case class Assignment(left: Primary, op: Terminal, right: Expression) extends VarargBranch(left, op, right) with Statement
+
+// Supplementary nodes
+case class Block(indent: Terminal, body: GrammarList, dedent: Terminal) extends TernaryBranch(indent, body, dedent) with Supplementary {
+  def toList: List[ParsingTree] = indent :: body :: dedent :: Nil
+}
 
 case class ForStmt private (args: List[ParsingTree]) extends ListVararg(args) with Statement
 object ForStmt {
 
-  def apply(fr: Terminal, counter: Primary, in: Terminal, expr: Expression,
-            indent_op: Option[Terminal], grammarList_opt: Option[GrammarList], dedent_opt: Option[Terminal]): Statement = {
+  def apply(fr: Terminal, elem: Primary, in: Terminal, collection: Expression, stmt_block: Option[Block]): Statement = {
 
-    val s: List[ParsingTree] = fr :: counter :: in :: expr :: Nil
-    val opts: List[ParsingTree] = (indent_op :: grammarList_opt :: dedent_opt :: Nil).flatMap(f => f match
-      case Some(value) => List(value)
-      case None => List.empty)
+    val s: List[ParsingTree] = fr :: elem :: in :: collection :: Nil
+    val body: List[ParsingTree] = stmt_block.map(_.toList).getOrElse(List.empty)
 
-    new ForStmt(s ::: opts)
+    new ForStmt(s ::: body)
   }
 }
 
 case class WhileStmt private (args: List[ParsingTree]) extends ListVararg(args) with Statement
 object WhileStmt {
-  def apply(wle: Terminal, expr: Expression,
-            indent_op: Option[Terminal], grammarList_opt: Option[GrammarList], dedent_opt: Option[Terminal]): Statement = {
+  def apply(cycle: Terminal, condition: Expression, stmt_block: Option[Block]): Statement = {
 
-    val s: List[ParsingTree] = wle :: expr :: Nil
-    val opts: List[ParsingTree] = (indent_op :: grammarList_opt :: dedent_opt :: Nil).flatMap(f => f match
-      case Some(value) => List(value)
-      case None => List.empty)
+    val s: List[ParsingTree] = cycle :: condition :: Nil
+    val body: List[ParsingTree] = stmt_block.map(_.toList).getOrElse(List.empty)
 
-    new WhileStmt(s ::: opts)
+    new WhileStmt(s ::: body)
   }
 }
 
 case class IfStmt private (args: List[ParsingTree]) extends ListVararg(args) with Statement
 object IfStmt {
-  // IF Expression INDENT? LIST[Statement]? DEDENT? ELSE? INDENT? LIST[Statement]? DEDENT?
 
-  def apply(if_lit: Terminal, expr: Expression,
-            indent_opt: Option[Terminal], list_opt: Option[GrammarList], dedent_opt: Option[Terminal],
-            else_opt: Option[Terminal], indent1_opt: Option[Terminal], list2_opt: Option[GrammarList], dedent1_opt: Option[Terminal]): Statement = {
+  def apply(if_lit: Terminal, cond: Expression, if_block: Option[Block], else_block: Option[(Terminal, Option[Block])]): IfStmt = {
+    val if_body = if_block.map(_.toList).getOrElse(List.empty)
+    val else_stmt = else_block.map { stmt =>
+      val (else_lit, block) = stmt
+      val body = block.map(_.toList).getOrElse(List.empty)
 
-    val opts = ListVararg.optionalVarargs(indent_opt, list_opt, dedent_opt, else_opt, indent1_opt, list2_opt, dedent1_opt)
+      else_lit :: body
+    }.getOrElse(List.empty)
 
-    IfStmt((if_lit :: expr :: Nil) ::: opts)
+    IfStmt(if_lit :: cond :: (if_body ::: else_stmt))
   }
 
 }

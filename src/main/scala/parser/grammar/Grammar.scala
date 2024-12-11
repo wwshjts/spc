@@ -185,15 +185,16 @@ object Grammar {
   def expression: Parser[Expression] = or
 
   // **** Statements ****
-  def for_loop: Parser[Statement] = FOR ~ primary ~ IN ~ expression ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ (parsed =>
-    val ((((((fr, primary), in), expr), ident_opt), list_opt), dedent_opt) = parsed
 
-    ForStmt(fr, primary, in, expr, ident_opt, list_opt, dedent_opt)
+  def for_loop: Parser[Statement] = FOR ~ primary ~ IN ~ expression ~ ?(block(statement)) ^^ (parsed =>
+    val ((((cycle, elem), in), collection), block) = parsed
+
+    ForStmt(cycle, elem, in, collection, block)
   )
 
-  def while_loop: Parser[Statement] = WHILE ~ expression ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ (parsed =>
-    val ((((wle, expr), ident), list), dedent) = parsed
-    WhileStmt(wle, expr, ident, list, dedent)
+  def while_loop: Parser[Statement] = WHILE ~ expression ~ ?(block(statement)) ^^ (parsed =>
+    val ((cycle, cond), block) = parsed
+    WhileStmt(cycle, cond, block)
   )
 
   def assignment: Parser[Statement] = primary ~ "=" ~ expression ^^ (parsed =>
@@ -201,12 +202,12 @@ object Grammar {
     Assignment(l, eq, r)
   )
 
-  def if_stmt: Parser[Statement] = IF ~ expression ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ~ ?(ELSE) ~ ?(INDENT) ~ ?(list_stmt) ~ ?(DEDENT) ^^ (
+  def if_stmt: Parser[Statement] = IF ~ expression ~ ?(block(statement)) ~ ?(ELSE ~ ?(block(statement))) ^^ {
     parsed =>
-      // TODO: really ugly, I need some API to work with nested tuples and somehow do not lose the types
-      val ((((((((if_stmt, expr), ident1), stmt1), dedent1), else_stmt), indent2), stmt2), dedent2) = parsed
-      IfStmt(if_stmt, expr, ident1, stmt1, dedent1, else_stmt, indent2, stmt2, dedent2)
-  )
+      val (((if_stmt, expr), block), else_stmt) = parsed
+
+      IfStmt(if_stmt, expr, block, else_stmt)
+  }
 
   def return_stmt: Parser[Statement]        = RETURN ~ ?(expression) ^^ (parsed => ReturnStmt(parsed._1, parsed._2))
   def break_stmt: Parser[Statement]         = BREAK ^^ BreakStmt
@@ -255,6 +256,11 @@ object Grammar {
   def definition: Parser[Definition] = variable_def <|> parameter_def <|> type_param_def <|> function_def <|> type_def
 
   def source_text: Parser[ParsingTree] = |**(type_def) ^^ GrammarList
+
+  def block[A <: ParsingTree](p: Parser[A]): Parser[Block] = INDENT ~ (|**(p) ^^ GrammarList) ~ DEDENT ^^ { parsed =>
+    val ((indent, list), dedent) = parsed
+    Block(indent, list, dedent)
+  }
 
   def _mkBinary(repr: (Expression, List[(Terminal, Expression)])): Expression = {
     val (left, kleene_star) = repr

@@ -31,7 +31,8 @@ class Statement extends AnyFunSuite {
         |""".stripMargin)
 
     val res = statement(input)
-    // TODO:
+
+    println(res)
   }
 
   test("minimal for") {
@@ -45,18 +46,24 @@ class Statement extends AnyFunSuite {
     val input = Lexer(
       """
         |while true
-        |doSmth = 3
+        |  doSmth = 3
         |""".stripMargin)
     val res = statement(input)
+
+    println(input)
+    println(res)
   }
 
   test("if stmt") {
     val input = Lexer(
       """
         |if !flag
-        |   t = 42
+        |  tmp = a
+        |  a = b
+        |  b = tmp
+        |  print(a, b)
         |else
-        |   t = 0
+        |  flat = true
         |""".stripMargin
     )
 
