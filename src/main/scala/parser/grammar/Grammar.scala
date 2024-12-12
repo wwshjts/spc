@@ -115,7 +115,10 @@ object Grammar extends syspro.tm.parser.Parser {
 
   private def _index_expr: Parser[PrimaryContainer] = "[" ~ expression ~ "]" ^^ (parsed => IndexExprContainer(parsed._1._1, parsed._1._2, parsed._2))
 
-  private def _invoke: Parser[PrimaryContainer] = "(" ~ separatedList_expr_comma ~ ")" ^^ (parsed => InvokeContainer(parsed._1._1, parsed._1._2, parsed._2))
+  def eps_empty_list: Parser[SeparatedList] = eps ^^ { parsed =>
+   SeparatedList(List.empty)
+  }
+  def _invoke: Parser[PrimaryContainer] = "(" ~ (separatedList_expr_comma <|> eps_empty_list) ~ ")" ^^ (parsed => InvokeContainer(parsed._1._1, parsed._1._2, parsed._2))
 
   // **** Priority 1 ****
   // Unary expression
@@ -345,16 +348,15 @@ object Grammar extends syspro.tm.parser.Parser {
       case Success(result, remain_input) =>
         tree = res.get
         if (res.remain.nonEmpty)
-          (new TextSpan(res.remain.head.start, res.remain.last.end)) :: Nil
+          (new TextSpan(res.remain.head.start, res.remain.last.end - res.remain.head.start + 1)) :: Nil
         else
           List.empty
       case Failure(msg, remain_input) =>
         tree = SourceText(GrammarList(List.empty))
-        (new TextSpan(res.remain.head.start, res.remain.last.end)) :: Nil
+        (new TextSpan(0, s.codePoints().count().toInt)) :: Nil
 
 
     println(s)
-    PResult(res.get, invalidRanges.asJava, List.empty.asJava)
-    //PResult(res.get, null, null)
+    PResult(tree, invalidRanges.asJava, List.empty.asJava)
   }
 }
