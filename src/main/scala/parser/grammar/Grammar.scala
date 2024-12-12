@@ -62,27 +62,27 @@ object Grammar extends syspro.tm.parser.Parser {
 
   def separatedList_expr_comma: Parser[SeparatedList] = (*?(expression ~ ",")) ~ expression ^^ { parsed =>
     val (list, expr) = parsed
-    SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
+    SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
 
   def separatedList_name_comma: Parser[SeparatedList] = (*?(name ~ ",")) ~ name ^^ { parsed =>
     val (list, expr) = parsed
-    SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
+    SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
 
   def separatedList_name_amper: Parser[SeparatedList] = *?(name ~ "&") ~ name ^^ { parsed =>
     val (list, amper) = parsed
-    SeparatedList((amper :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
+    SeparatedList((amper :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
 
   def separatedList_parameterDef_comma: Parser[SeparatedList] = *?(parameter_def ~ ",") ~ parameter_def ^^ { parsed =>
     val (list, comma) = parsed
-    SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse *)
+    SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse )
   }
 
   def separatedList_typeParameterDef_comma: Parser[SeparatedList] = *?(type_param_def ~ ",") ~ type_param_def ^^ { parsed =>
     val (list, comma) = parsed
-    SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse *)
+    SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
 
   def type_bound: Parser[TypeBound]  = "<:" ~ separatedList_name_amper ^^ (parsed => TypeBound(parsed._1, parsed._2))
