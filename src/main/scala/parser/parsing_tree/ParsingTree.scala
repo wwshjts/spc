@@ -57,7 +57,7 @@ sealed trait TernaryBranch(first: ParsingTree, second: ParsingTree, third: Parsi
   override def apply(index: Int): Option[ParsingTree] = index match
     case 0 => Some(first)
     case 1 => Some(second)
-    case 3 => Some(third)
+    case 2 => Some(third)
     case _ => None
 
   override def rank(): Int = 3
@@ -83,7 +83,6 @@ object ListVararg {
 
 }
 
-
 sealed trait Leaf extends Tree {
   override def apply(index: Int): Option[ParsingTree] = None
 
@@ -93,8 +92,7 @@ sealed trait Leaf extends Tree {
 
 // ------------------ Grammar ------------------
 sealed trait Grammar extends ParsingTree {
-  override def kind(): SyntaxKind = ???
-  def token(): Token = null
+  override def token(): Token = null
 }
 
 /**
@@ -125,6 +123,7 @@ sealed trait Definition extends Grammar
 sealed trait Supplementary extends Grammar {
   override def kind(): SyntaxKind = throw new IllegalAccessException("Supplementary node doesn't correspond to syntax kind")
 }
+
 // ---------------------------------------------
 
 
@@ -199,8 +198,9 @@ case class OBJECT(tkn: Token)         extends Leaf with Terminal(tkn)
 case class INTERFACE(tkn: Token)      extends Leaf with Terminal(tkn)
 
 // some real shit
-case class SeparatedList(trees: ParsingTree*)     extends VarargBranch(trees*) with Grammar
-case class GrammarList(trees: List[ParsingTree])  extends ListVararg(trees) with Grammar
+sealed abstract class ProtoList(trees: List[ParsingTree]) extends ListVararg(trees) with Grammar
+case class SeparatedList(trees: List[ParsingTree]) extends ProtoList(trees)
+case class GrammarList(trees: List[ParsingTree])   extends ProtoList(trees)
 case class TypeBound(bound: Terminal, separatedList: SeparatedList) extends BinaryBranch(bound, separatedList) with Grammar
 
 sealed abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Atom
@@ -297,9 +297,9 @@ case class ContinueStmt(op: Terminal) extends UnaryBranch(op) with Statement
 case class ReturnStmt(args: List[ParsingTree]) extends ListVararg(args) with Statement
 
 case object ReturnStmt {
-  def apply(op: Terminal, ret_val: Option[Expression]): Statement = {
-    val opts: List[Expression] = if (ret_val.isDefined) List(ret_val.get) else List()
-    ReturnStmt(op :: opts)
+  def apply(ret: Terminal, ret_val_opt: Option[Expression]): Statement = {
+    val ret_val: Expression = ret_val_opt.orNull
+    ReturnStmt(ret :: ret_val :: Nil)
   }
 }
 
@@ -310,7 +310,24 @@ case class Assignment(left: Primary, op: Terminal, right: Expression) extends Va
 // Supplementary nodes
 case class Block(indent: Terminal, body: GrammarList, dedent: Terminal) extends TernaryBranch(indent, body, dedent) with Supplementary {
   def toList: List[ParsingTree] = indent :: body :: dedent :: Nil
+  def asTuple: (Terminal, GrammarList, Terminal) = (indent, body, dedent)
 }
+
+/** Not really suitable node for my IR, needed for compatibility with testing module */
+object OptionalArgConverter {
+  def orNull[A <: ParsingTree, B <: ParsingTree](args: Option[(A, B)]): (A, B) =
+    if (args.isEmpty)
+      (null.asInstanceOf[A], null.asInstanceOf[B])
+    else
+      (args.get._1, args.get._2)
+
+  def orNull(b: Option[Block]): (Terminal, GrammarList, Terminal) =
+    if (b.isEmpty)
+      (null, null, null)
+    else
+      b.get.asTuple
+}
+
 
 case class ForStmt private (args: List[ParsingTree]) extends ListVararg(args) with Statement
 object ForStmt {
@@ -318,9 +335,9 @@ object ForStmt {
   def apply(fr: Terminal, elem: Primary, in: Terminal, collection: Expression, stmt_block: Option[Block]): Statement = {
 
     val s: List[ParsingTree] = fr :: elem :: in :: collection :: Nil
-    val body: List[ParsingTree] = stmt_block.map(_.toList).getOrElse(List.empty)
+    val (indent, body, dedent) = OptionalArgConverter.orNull(stmt_block)
 
-    new ForStmt(s ::: body)
+    new ForStmt(fr :: elem :: in :: collection :: indent :: body :: dedent :: Nil)
   }
 }
 
@@ -328,10 +345,9 @@ case class WhileStmt private (args: List[ParsingTree]) extends ListVararg(args) 
 object WhileStmt {
   def apply(cycle: Terminal, condition: Expression, stmt_block: Option[Block]): Statement = {
 
-    val s: List[ParsingTree] = cycle :: condition :: Nil
-    val body: List[ParsingTree] = stmt_block.map(_.toList).getOrElse(List.empty)
+    val (indent, body, dedent) = OptionalArgConverter.orNull(stmt_block)
 
-    new WhileStmt(s ::: body)
+    WhileStmt(cycle :: condition :: indent :: body :: dedent :: Nil)
   }
 }
 
@@ -339,15 +355,15 @@ case class IfStmt private (args: List[ParsingTree]) extends ListVararg(args) wit
 object IfStmt {
 
   def apply(if_lit: Terminal, cond: Expression, if_block: Option[Block], else_block: Option[(Terminal, Option[Block])]): IfStmt = {
-    val if_body = if_block.map(_.toList).getOrElse(List.empty)
-    val else_stmt = else_block.map { stmt =>
-      val (else_lit, block) = stmt
-      val body = block.map(_.toList).getOrElse(List.empty)
-
-      else_lit :: body
-    }.getOrElse(List.empty)
-
-    IfStmt(if_lit :: cond :: (if_body ::: else_stmt))
+    val (if_indent, if_body, if_dedent) = OptionalArgConverter.orNull(if_block)
+    val tp: (Terminal, Terminal, GrammarList, Terminal) = else_block match {
+      case Some(value) =>
+        val (indent, body, dedent) = OptionalArgConverter.orNull(value._2)
+        (value._1, indent, body, dedent)
+      case None => (null, null, null, null)
+    }
+    val (else_kw, else_indent, else_body, else_dedent) = tp
+    IfStmt(if_lit :: cond :: if_indent :: if_body :: if_dedent :: else_kw :: else_indent :: else_body :: else_dedent :: Nil)
   }
 
 }
@@ -360,10 +376,10 @@ case class VariableDef private (args: List[ParsingTree]) extends ListVararg(args
 object VariableDef {
   // (VAR | VAL) IDENTIFIER COLON? NameExpression? EQUALS? Expression?
   def apply(mod: Terminal, identifier: Terminal, type_opt: Option[(Terminal, Name)], assignment_opt: Option[(Terminal, Expression)]): VariableDef = {
-    val type_name: List[ParsingTree] = type_opt.map(t => t._1 :: t._2 :: Nil).getOrElse(List.empty)
-    val assignment: List[ParsingTree] = assignment_opt.map(t => t._1 :: t._2 :: Nil).getOrElse(List.empty)
+    val (colon, type_name) = OptionalArgConverter.orNull(type_opt)
+    val (eq, assignment) = OptionalArgConverter.orNull(assignment_opt)
 
-    VariableDef(mod :: identifier :: (type_name ::: assignment))
+    VariableDef(mod :: identifier :: colon :: type_name :: eq :: assignment :: Nil)
   }
 }
 
@@ -372,23 +388,19 @@ case class ParameterDef(identifier: Terminal, colon: Terminal, name: Name) exten
 case class TypeParamDef private (args: List[ParsingTree]) extends ListVararg(args) with Definition
 
 object TypeParamDef {
-  def apply(identifier: Terminal, typeBound: Option[TypeBound]): TypeParamDef = {
-    val opts = ListVararg.optionalVarargs(typeBound)
-    val other = identifier :: Nil
-
-    TypeParamDef(other ::: opts)
-  }
+  def apply(identifier: Terminal, typeBound: Option[TypeBound]): TypeParamDef = TypeParamDef(identifier :: typeBound.orNull :: Nil)
 }
 
 case class FunctionDef private (args: List[ParsingTree]) extends ListVararg(args) with Definition
 
 object FunctionDef {
   def apply(modifiers: GrammarList, definition: Terminal, name: Terminal, lp: Terminal, args_opt: Option[SeparatedList], rp: Terminal, ret_type_opt: Option[(Terminal, Name)], block: Option[Block]): FunctionDef = {
-    val args = args_opt.toList
-    val ret_type = ret_type_opt.map(rt => rt._1 :: rt._2 :: Nil).getOrElse(List.empty)
-    val body = block.map(_.toList).getOrElse(List.empty)
 
-    FunctionDef((modifiers :: definition :: name :: lp :: args) ::: (rp :: ret_type ::: body))
+    val args_list = args_opt.orNull
+    val (ret_kw, ret_type) = OptionalArgConverter.orNull(ret_type_opt)
+    val (indent, body, dedent) = OptionalArgConverter.orNull(block)
+
+    FunctionDef(modifiers :: definition :: name :: lp :: args_list :: rp :: ret_kw :: ret_type :: indent :: body :: dedent :: Nil)
   }
 }
 
@@ -398,12 +410,23 @@ object TypeDefinition {
   // TODO: see todo in grammar on this rule
   def apply(mod: Terminal, identifier: Terminal, params_opt: List[ParsingTree], bound_opt: Option[TypeBound], block: Option[Block]): TypeDefinition = {
 
-    val opts = params_opt :::  bound_opt.toList ::: block.map(_.toList).getOrElse(List.empty)
-    val args = mod :: identifier :: Nil
+    var less: ParsingTree = null
+    var params: ParsingTree = null
+    var greater: ParsingTree = null
 
-    TypeDefinition(args ::: opts)
+    if (params_opt.nonEmpty)
+      less = params_opt(0)
+      params = params_opt(1)
+      greater = params_opt(2)
+
+    val bound = bound_opt.orNull
+    val (indent, body, dedent) = OptionalArgConverter.orNull(block)
+
+    TypeDefinition(mod :: identifier :: less :: params :: greater :: bound :: indent :: body :: dedent :: Nil)
   }
 }
+
+case class SourceText (text: GrammarList) extends Grammar with UnaryBranch(text)
 // ============================= Syntax ==========================
 
 trait DSLEntity {

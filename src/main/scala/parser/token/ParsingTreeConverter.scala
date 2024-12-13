@@ -9,8 +9,13 @@ import syspro.tm.lexer.{BooleanLiteralToken, Keyword, Symbol}
 
 object ParsingTreeConverter {
   def apply(tree: ParsingTree): AnySyntaxKind = tree match
+<<<<<<< HEAD
     case tree: Tree => throw IllegalArgumentException("Should not reach here")
     case grammar: Grammar => grammar match
+=======
+    case grammar: Grammar => grammar match
+      case _: SourceText => SyntaxKind.SOURCE_TEXT
+>>>>>>> Diagnostics
       case terminal: Terminal => terminal match
         case BAD(tkn) => SyntaxKind.BAD
         case INDENT(tkn) => SyntaxKind.INDENT
@@ -138,7 +143,8 @@ object ParsingTreeConverter {
         case FunctionDef(args) => SyntaxKind.FUNCTION_DEFINITION
         case TypeDefinition(args) => SyntaxKind.TYPE_DEFINITION
       case supplementary: Supplementary => throw IllegalStateException("Supplementary doesn't have any syntax kind")
-      case SeparatedList(trees@_*) => SyntaxKind.SEPARATED_LIST
-      case GrammarList(trees) => SyntaxKind.LIST
+      case proto: ProtoList => proto match
+        case _: SeparatedList => SyntaxKind.SEPARATED_LIST
+        case _: GrammarList   => SyntaxKind.LIST
       case TypeBound(bound, separatedList) => SyntaxKind.TYPE_BOUND
 }

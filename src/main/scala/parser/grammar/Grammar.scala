@@ -6,9 +6,13 @@ import parser.parsing_tree.*
 import org.syspro.spc.lexer.Lexer
 import org.syspro.spc.parser.grammar.BasicLeafParser.eps
 import org.syspro.spc.parser.parsing_tree
-import syspro.tm.lexer
+import syspro.tm.{WebServer, lexer}
 import syspro.tm.lexer.SymbolToken
 import syspro.tm.parser.{Diagnostic, ParseResult, SyntaxNode, TextSpan}
+
+import scala.collection.mutable.ListBuffer
+import scala.jdk.CollectionConverters.*
+
 
 /**
  * Grammar of SysPro lang, written in my DSL of parser combinators
@@ -58,27 +62,27 @@ object Grammar extends syspro.tm.parser.Parser {
 
   def separatedList_expr_comma: Parser[SeparatedList] = (*?(expression ~ ",")) ~ expression ^^ { parsed =>
     val (list, expr) = parsed
-    SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
+    SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
 
   def separatedList_name_comma: Parser[SeparatedList] = (*?(name ~ ",")) ~ name ^^ { parsed =>
     val (list, expr) = parsed
-    SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
+    SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
 
   def separatedList_name_amper: Parser[SeparatedList] = *?(name ~ "&") ~ name ^^ { parsed =>
     val (list, amper) = parsed
-    SeparatedList((amper :: list.flatten((a, b) => List(a, b)).reverse).reverse*)
+    SeparatedList((amper :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
 
   def separatedList_parameterDef_comma: Parser[SeparatedList] = *?(parameter_def ~ ",") ~ parameter_def ^^ { parsed =>
     val (list, comma) = parsed
-    SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse *)
+    SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse )
   }
 
   def separatedList_typeParameterDef_comma: Parser[SeparatedList] = *?(type_param_def ~ ",") ~ type_param_def ^^ { parsed =>
     val (list, comma) = parsed
-    SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse *)
+    SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
 
   def type_bound: Parser[TypeBound]  = "<:" ~ separatedList_name_amper ^^ (parsed => TypeBound(parsed._1, parsed._2))
@@ -111,7 +115,10 @@ object Grammar extends syspro.tm.parser.Parser {
 
   private def _index_expr: Parser[PrimaryContainer] = "[" ~ expression ~ "]" ^^ (parsed => IndexExprContainer(parsed._1._1, parsed._1._2, parsed._2))
 
-  private def _invoke: Parser[PrimaryContainer] = "(" ~ separatedList_expr_comma ~ ")" ^^ (parsed => InvokeContainer(parsed._1._1, parsed._1._2, parsed._2))
+  def eps_empty_list: Parser[SeparatedList] = eps ^^ { parsed =>
+   SeparatedList(List.empty)
+  }
+  def _invoke: Parser[PrimaryContainer] = "(" ~ (separatedList_expr_comma <|> eps_empty_list) ~ ")" ^^ (parsed => InvokeContainer(parsed._1._1, parsed._1._2, parsed._2))
 
   // **** Priority 1 ****
   // Unary expression
@@ -253,7 +260,9 @@ object Grammar extends syspro.tm.parser.Parser {
     TypeDefinition(mod, name, sepList, bound_opt, block)
   }
 
-  def source_text: Parser[ParsingTree] = |**(type_def) ^^ GrammarList
+  def source_text: Parser[ParsingTree] = |**(type_def) ^^ { parsed =>
+    SourceText(GrammarList(parsed))
+  }
 
   def block[A <: ParsingTree](p: Parser[A]): Parser[Block] = INDENT ~ (|**(p) ^^ GrammarList) ~ DEDENT ^^ { parsed =>
     val ((indent, list), dedent) = parsed
@@ -333,8 +342,21 @@ object Grammar extends syspro.tm.parser.Parser {
   case class PResult(root: SyntaxNode, invalidRanges: java.util.List[TextSpan], diagnostics: java.util.List[Diagnostic]) extends ParseResult
   override def parse(s: String): ParseResult = {
     val res = source_text(Lexer(s))
+
+    var tree: SyntaxNode = null
+    val invalidRanges = res match
+      case Success(result, remain_input) =>
+        tree = res.get
+        if (res.remain.nonEmpty)
+          (new TextSpan(res.remain.head.start, res.remain.last.end - res.remain.head.start + 1)) :: Nil
+        else
+          List.empty
+      case Failure(msg, remain_input) =>
+        tree = SourceText(GrammarList(List.empty))
+        (new TextSpan(0, s.codePoints().count().toInt)) :: Nil
+
+
     println(s)
-    println(res)
-    PResult(res.get, null, null)
+    PResult(tree, invalidRanges.asJava, List.empty.asJava)
   }
 }
