@@ -5,6 +5,7 @@ import parser.parsing_tree.*
 
 import org.syspro.spc.lexer.Lexer
 import org.syspro.spc.parser.grammar.BasicLeafParser.eps
+import org.syspro.spc.parser.grammar.ParsingError.*
 import org.syspro.spc.parser.parsing_tree
 import syspro.tm.{WebServer, lexer}
 import syspro.tm.lexer.SymbolToken
@@ -33,19 +34,6 @@ object Grammar extends syspro.tm.parser.Parser {
   def null_i: Parser[IdentifierName]    = NULL ^^ IdentifierName
   def this_expr: Parser[ThisExpr]       = THIS ^^ ThisExpr
   def super_expr: Parser[SuperExpr]     = SUPER ^^ SuperExpr
-
-  // Terminals
-
-
-  def keyword_terminal: Parser[Terminal] = THIS <|> SUPER <|> NULL <|> IS <|> FOR <|> WHILE <|> IF <|> ELSE <|> IN
-  <|> BREAK <|> CONTINUE <|> RETURN <|> VAR <|> VAL <|> OVERRIDE <|> DEF
-
-  def symbol_terminal: Parser[Terminal] = "." <|> ":" <|> "," <|> "+" <|> "-" <|> "*" <|> "/" <|> "~" <|> "%" <|> "(" <|> ")"
-  <|> "[" <|> "]" <|> "&" <|> "^" <|> "|" <|> "<" <|> ">" <|> "?" <|> "!" <|> "=" <|> "==" <|> "!=" <|> "<=" <|> ">="
-  <|> "&&" <|> "||" <|> "<:"
-
-  def terminal: Parser[Terminal] = BAD <|> INDENT <|> DEDENT <|> IDENTIFIER <|> RUNE <|> BOOLEAN <|> INTEGER <|> STRING
-  <|> keyword_terminal <|> symbol_terminal
 
   // Name expressions
   def name: Parser[Name] =  option_name <|> generic_name <|> identifier_name
@@ -88,23 +76,22 @@ object Grammar extends syspro.tm.parser.Parser {
   def type_bound: Parser[TypeBound]  = "<:" ~ separatedList_name_amper ^^ (parsed => TypeBound(parsed._1, parsed._2))
 
   def atom: Parser[Primary] = integer <|> string <|> bool <|> rune <|> this_expr
-                                            <|> super_expr <|> null_lit <|> name
+                                            <|> super_expr <|> null_lit <|> name |?| AtomErr
 
   // **** Priority 0 ****
 
   // Non left-recursive primary rule
   // This grammar transformation is fully equivalent to ordinary left recursion reduction
-  def primary: Parser[Primary] = (atom <|> group) ~ *?(_primary)
-    ^^ (parsed =>
-      val (left, kleene_star) = parsed
-      kleene_star match {
-        case List() => left
-        case head :: tail =>
-          val first = head(left)
+  def primary: Parser[Primary] = (atom <|> group) ~ *?(_primary) ^^ { parsed =>
+    val (left, kleene_star) = parsed
+    kleene_star match {
+      case List() => left
+      case head :: tail =>
+        val first = head(left)
 
-          tail.foldLeft(first)((left, container) => container(left))
-      }
-    )
+        tail.foldLeft(first)((left, container) => container(left))
+    }
+  }
 
 
   private def _primary: Parser[PrimaryContainer] = _memberAccess <|> _index_expr <|> _invoke
@@ -136,6 +123,7 @@ object Grammar extends syspro.tm.parser.Parser {
 
   // **** Priority 4 ****
 
+  // TODO: wrong
   // My lexer doesn't produce "<<" token, it recognises this sequence of symbols as sequence of tokens
   def left_left: Parser[Terminal] = "<" ~ "<" ^^ { parsed =>
     val (left, right) = parsed

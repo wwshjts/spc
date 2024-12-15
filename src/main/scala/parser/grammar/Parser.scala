@@ -1,6 +1,7 @@
 package org.syspro.spc
 package parser.grammar
 
+import org.syspro.spc.parser.grammar.ParsingError.{MissMatchToken, NothingToConsume}
 import org.syspro.spc.parser.parsing_tree.DSLEntity
 
 import scala.Conversion
@@ -24,21 +25,21 @@ case class Success[+A](result: A, remain_input: List[Token]) extends Result[A] {
   override def remain: List[Token] = remain_input
 }
 
-case class Failure(msg: Predef.String, remain_input: List[Token]) extends Result[Nothing] {
-  override def map[U](f: Nothing => U): Result[U] = Failure(msg, remain_input)
+// TODO: refactor Failures cases
+case class Failure(error: ParsingError, remain_input: List[Token]) extends Result[Nothing] {
+  override def map[U](f: Nothing => U): Result[U] = Failure(error, remain_input)
 
   override def get: Nothing = ???
 
   override def remain: List[Token] = remain_input
+
+  override def toString: String = remain_input match
+    case head :: tail =>
+      val token = remain_input.head
+      s"Error on token: $token\n pos: ${(token.start, token.end)}\n" + error
+    case _ => error.toString
 }
 
-/*
-enum Result[+A] {
-  case Success(result: A, remain_input: List[Token])
-  case Failure(msg: Predef.String)
-  // TODO for better ERROR handling maybe I should add Fatal here
-}
- */
 
 /**
  * A parser for things
@@ -56,7 +57,6 @@ enum Result[+A] {
  * @tparam A Return type of parser
  */
 trait Parser[+A] extends (List[Token] => Result[A]) {
-
   def apply(input: List[Token]): Result[A]
 
   /**
@@ -184,6 +184,33 @@ trait Parser[+A] extends (List[Token] => Result[A]) {
 
 
   // TODO: make nice error handling can I?
+
+  /**
+   * Marks parser whits specific error code
+   *
+   * Really useful when combining parsers
+   * @param error Code of error
+   * @return Parser, that marked with error code
+   */
+  def mark(error: ParsingError): Parser[A] = {
+    val p: Parser[A] = this
+
+    (input: List[Token]) => {
+      p(input) match
+        case s @ Success(result, remain_input) => s
+        case Failure(old_error, remain_input) => Failure(error, remain_input)
+    }
+  }
+
+  /**
+   * Marks parser whits specific error code
+   *
+   * Really useful when combining parsers
+   *
+   * @param error Code of error
+   * @return Parser, that marked with error code
+   */
+  def |?|(error: ParsingError): Parser[A] = mark(error)
 }
 
 object Combinators {
@@ -247,15 +274,6 @@ object Combinators {
 
 }
 
-object Parser {
-  def consume[A](input: List[Token])(consumer: Token => Result[A]): Result[A] = {
-    input match
-      case token :: tail => consumer(token)
-      case _ => Failure("Eof", input)
-  }
-}
-
-
 // TODO: add doc
 object BasicLeafParser {
   /**
@@ -263,14 +281,19 @@ object BasicLeafParser {
    * @return parser, that consumes one input terminal token, return Leaf node for this token
    */
   def apply(toMatch: DSLEntity): Parser[Terminal] = {
+    def consume(input: List[Token]): Result[Terminal] =
+      val token = input.head
+      val syntax = SyntaxKindConverter(token)
+      if (syntax == toMatch)
+        Success(toMatch(token), input.tail)
+      else
+        Failure(MissMatchToken(token, toMatch, syntax), input)
 
-    (input: List[Token]) => {
-      Parser.consume(input) { (token: Token) =>
-
-        val syntax = SyntaxKindConverter(token)
-        if (syntax == toMatch) Success(toMatch(token), input.tail) else Failure(s"Can't parse Token $token, expected syntax kind $toMatch, found $syntax\n state $input", input)
-      }
-    }
+    (input: List[Token]) =>
+      if (input.nonEmpty)
+        consume(input)
+      else
+        Failure(NothingToConsume(toMatch), input)
   }
 
   /** Parser, that always succeeds. Doesn't consume any tokens */
