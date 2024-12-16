@@ -385,33 +385,11 @@ class Expression extends AnyFunSuite {
   }
 
   test("nested generics") {
-    val input = Lexer("ArrayList<ArrayList<Int64>>")
-    println(input)
+    val input = Lexer("P<A, P<A, P<A, B, C>>>")
     val res = expression(input)
 
-    /*
-    val expected =
-      Success(
-        GenericName(
-          IDENTIFIER(input(0)),
-          LEFT(input(1)),
-          SeparatedList(
-            GenericName(
-              IDENTIFIER(input(2)),
-              LEFT(input(3)),
-              SeparatedList(
-                IdentifierName(IDENTIFIER(input(4)))
-              ),
-              RIGHT(input(5))
-            )
-          ),
-          RIGHT(input(6))
-        ),List()
-      )
+    println(res)
 
-    assertResult(expected)(res)
-
-     */
   }
 
 }

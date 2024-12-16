@@ -55,17 +55,50 @@ object Grammar extends syspro.tm.parser.Parser {
     OptionName(q, name)
   }
 
-  def generic_name: Parser[GenericName] = IDENTIFIER ~ "<" ~ separatedList_name_comma ~ ">" ^^ { parsed =>
-    val (((i, lt), sep), gt) = parsed
-    GenericName(i, lt, sep, gt)
-  }
-
-  def separatedList_expr_comma: Parser[SeparatedList] = (*?(expression ~ ",")) ~ expression ^^ { parsed =>
+  def generic_parameters: Parser[SeparatedList] = *?(name ~ ",") ~ name ^^ { parsed =>
     val (list, expr) = parsed
     SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
 
-  def separatedList_name_comma: Parser[SeparatedList] = (*?(name ~ ",")) ~ name ^^ { parsed =>
+
+  def soft_generic_parameters: Parser[IncompleteGenericParams] = *?(name ~ ",") ~ almost_generic ^^ { parsed =>
+    val (list, almost_generic) = parsed
+    IncompleteGenericParams(list.flatten((a, b) => List(a, b)), almost_generic)
+  }
+
+  def almost_generic: Parser[AlmostGeneric] = IDENTIFIER ~ "<" ~ generic_parameters ^^ { parsed =>
+    val ((identifier, left), params) = parsed
+    AlmostGeneric(identifier, left, params)
+  }
+
+  case class AlmostGeneric(identifier: Terminal, left: Terminal, parameters: SeparatedList)
+  case class IncompleteGenericParams(params: List[ParsingTree], incomplete: AlmostGeneric)
+
+  def generic: Parser[GenericName] = IDENTIFIER ~ "<" ~ generic_parameters ~ ">" ^^ { parsed =>
+    val (((i, lt), sep), gt) = parsed
+    GenericName(i, lt, sep, gt)
+  }
+
+  def nested_generic: Parser[GenericName] = IDENTIFIER ~ "<" ~ soft_generic_parameters ~ ">>" ^^ { parsed =>
+    val (((i, lt), params), gt_gt) = parsed
+
+    val gt_gt_token = gt_gt.token()
+    val gt_nested = RIGHT(new SymbolToken(gt_gt_token.start, gt_gt_token.start, gt_gt_token.leadingTriviaLength, 0, lexer.Symbol.GREATER_THAN))
+    val gt = RIGHT(new SymbolToken(gt_gt_token.end, gt_gt_token.end, 0, gt_gt_token.trailingTriviaLength, lexer.Symbol.GREATER_THAN))
+
+    // construct nested generic
+    val incomplete = params.incomplete
+    val nested_generic = GenericName(incomplete.identifier, incomplete.left, incomplete.parameters, gt_nested)
+
+    // construct generic name
+    val complete_params = SeparatedList((nested_generic :: params.params.reverse).reverse)
+
+    GenericName(i, lt, complete_params, gt)
+  }
+
+  def generic_name: Parser[GenericName] = generic <|> nested_generic 
+
+  def separatedList_expr_comma: Parser[SeparatedList] = *?(expression ~ ",") ~ expression ^^ { parsed =>
     val (list, expr) = parsed
     SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
@@ -136,19 +169,7 @@ object Grammar extends syspro.tm.parser.Parser {
 
   // **** Priority 4 ****
 
-  // My lexer doesn't produce "<<" token, it recognises this sequence of symbols as sequence of tokens
-  def left_left: Parser[Terminal] = "<" ~ "<" ^^ { parsed =>
-    val (left, right) = parsed
-    LEFT_LEFT(new SymbolToken(left.token().start, right.token().end, left.token().leadingTriviaLength, right.token().trailingTriviaLength, lexer.Symbol.LESS_THAN_LESS_THAN))
-  }
-
-  // My lexer doesn't produce ">>" token, it recognises this sequence of symbols as sequence of tokens
-  def right_right: Parser[Terminal] = ">" ~ ">" ^^ { parsed =>
-    val (left, right) = parsed
-    RIGHT_RIGHT(new SymbolToken(left.token().start, right.token().end, left.token().leadingTriviaLength, right.token().trailingTriviaLength, lexer.Symbol.GREATER_THAN_GREATER_THAN))
-  }
-
-  def shift: Parser[Expression] = term ~ *?((left_left <|> right_right)  ~ term) ^^ _mkBinary
+  def shift: Parser[Expression] = term ~ *?(("<<" <|> ">>")  ~ term) ^^ _mkBinary
 
   // **** Priority 5 ****
   def bitwiseAnd: Parser[Expression] = shift ~ *?("&" ~ shift) ^^ _mkBinary
