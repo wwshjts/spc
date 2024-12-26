@@ -1,8 +1,9 @@
 package org.syspro.spc
-
-import syspro.tm.lexer.Token
+package lexer
 
 import lexer.SpcLexer
+
+import syspro.tm.lexer.Token
 
 import scala.jdk.CollectionConverters.*
 

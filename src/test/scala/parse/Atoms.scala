@@ -5,7 +5,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.syspro.spc.parser.grammar.Grammar.*
 import org.syspro.spc.parser.grammar.{Combinators, Parser, Success}
 import parser.parsing_tree.*
-import org.syspro.spc.Lexer
+import org.syspro.spc.lexer.Lexer
 
 class Atoms extends AnyFunSuite {
   test("integer") {
