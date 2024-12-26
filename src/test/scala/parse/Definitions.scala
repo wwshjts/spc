@@ -2,7 +2,7 @@ package org.syspro.spc
 package parse
 
 import org.scalatest.funsuite.AnyFunSuite
-import org.syspro.spc.lexer.Lexer
+import org.syspro.spc.Lexer
 import org.syspro.spc.parser.grammar.Grammar.*
 import org.syspro.spc.parser.grammar.Success
 import org.syspro.spc.parser.parsing_tree.*

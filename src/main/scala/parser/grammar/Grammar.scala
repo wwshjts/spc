@@ -2,8 +2,7 @@ package org.syspro.spc
 package parser.grammar
 
 import parser.parsing_tree.*
-
-import org.syspro.spc.lexer.Lexer
+import org.syspro.spc.Lexer
 import org.syspro.spc.parser.grammar.BasicLeafParser.eps
 import org.syspro.spc.parser.parsing_tree
 import syspro.tm.{WebServer, lexer}

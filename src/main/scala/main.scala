@@ -1,6 +1,5 @@
 package org.syspro.spc
 
-import org.sypro.spc.lexer.SpcLexer
 import org.syspro.spc.parser.grammar.Grammar
 import syspro.tm.{Tasks, WebServer}
 import syspro.tm.lexer.TestMode

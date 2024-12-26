@@ -2,9 +2,9 @@ package org.syspro.spc
 package parse
 
 import org.scalatest.funsuite.AnyFunSuite
-import org.syspro.spc.lexer.Lexer
 import org.syspro.spc.parser.grammar.Grammar.expression
 import parser.parsing_tree.*
+import org.syspro.spc.Lexer
 import org.syspro.spc.parser.grammar.Success
 
 
