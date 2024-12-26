@@ -375,8 +375,6 @@ object Grammar extends syspro.tm.parser.Parser {
         tree = SourceText(GrammarList(List.empty))
         (new TextSpan(0, s.codePoints().count().toInt)) :: Nil
 
-
-    println(s)
     PResult(tree, invalidRanges.asJava, List.empty.asJava)
   }
 }

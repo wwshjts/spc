@@ -199,8 +199,18 @@ case class INTERFACE(tkn: Token)      extends Leaf with Terminal(tkn)
 
 // some real shit
 sealed abstract class ProtoList(trees: List[ParsingTree]) extends ListVararg(trees) with Grammar
-case class SeparatedList(trees: List[ParsingTree]) extends ProtoList(trees)
-case class GrammarList(trees: List[ParsingTree])   extends ProtoList(trees)
+case class SeparatedList private (trees: List[ParsingTree]) extends ProtoList(trees)
+
+// It is done only for checker module compatibility
+case object SeparatedList {
+  def apply(trees: List[ParsingTree]): SeparatedList = if trees.nonEmpty then new SeparatedList(trees) else null
+}
+case class GrammarList private (trees: List[ParsingTree])   extends ProtoList(trees)
+
+// It is done only for checker module compatibility
+case object GrammarList {
+  def apply(trees: List[ParsingTree]): GrammarList = if trees.nonEmpty then new GrammarList(trees) else null
+}
 case class TypeBound(bound: Terminal, separatedList: SeparatedList) extends BinaryBranch(bound, separatedList) with Grammar
 
 sealed abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Atom
@@ -426,7 +436,8 @@ object TypeDefinition {
   }
 }
 
-case class SourceText (text: GrammarList) extends Grammar with UnaryBranch(text)
+case class SourceText(text: GrammarList) extends Grammar with UnaryBranch(text)
+
 // ============================= Syntax ==========================
 
 trait DSLEntity {
