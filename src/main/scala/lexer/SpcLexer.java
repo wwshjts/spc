@@ -13,7 +13,7 @@ import java.util.*;
         End state: Context index points to the last codePoint in lexeme
  */
 
-public class SpcLexer implements Lexer {
+public class SpcLexer implements syspro.tm.lexer.Lexer {
 
     public ResultOfLexing spcLex(String s) {
         LinkedList<Token> tokens = new LinkedList<>();
