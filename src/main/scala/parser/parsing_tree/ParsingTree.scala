@@ -336,7 +336,8 @@ object OptionalArgConverter {
 }
 
 
-case class ForStmt private (args: List[ParsingTree]) extends ListVararg(args) with Statement
+case class ForStmt private (fr: Terminal, elem: Primary, in: Terminal, collection: Expression, indent: Terminal, body: GrammarList, dedent: Terminal)
+  extends VarargBranch(fr, elem, in, collection, indent, body, dedent) with Statement
 object ForStmt {
 
   def apply(fr: Terminal, elem: Primary, in: Terminal, collection: Expression, stmt_block: Option[Block]): Statement = {
@@ -344,21 +345,24 @@ object ForStmt {
     val s: List[ParsingTree] = fr :: elem :: in :: collection :: Nil
     val (indent, body, dedent) = OptionalArgConverter.orNull(stmt_block)
 
-    new ForStmt(fr :: elem :: in :: collection :: indent :: body :: dedent :: Nil)
+    new ForStmt(fr, elem, in, collection, indent, body, dedent)
   }
 }
 
-case class WhileStmt private (args: List[ParsingTree]) extends ListVararg(args) with Statement
+case class WhileStmt private (cycle: Terminal, condition: Expression, indent: Terminal, body: GrammarList, dedent: Terminal)
+  extends VarargBranch(cycle, condition, indent, body, dedent) with Statement
 object WhileStmt {
   def apply(cycle: Terminal, condition: Expression, stmt_block: Option[Block]): Statement = {
 
     val (indent, body, dedent) = OptionalArgConverter.orNull(stmt_block)
 
-    WhileStmt(cycle :: condition :: indent :: body :: dedent :: Nil)
+    WhileStmt(cycle, condition, indent, body, dedent)
   }
 }
 
-case class IfStmt private (args: List[ParsingTree]) extends ListVararg(args) with Statement
+case class IfStmt private (if_lit: Terminal, cond: Expression, if_indent: Terminal, if_body: GrammarList, if_dedent: Terminal,
+                           else_kw: Terminal, else_indent: Terminal, else_body: GrammarList, else_dedent: Terminal)
+  extends VarargBranch(if_lit, cond, if_indent, if_body, if_dedent, else_kw, else_indent, else_body, else_dedent) with Statement
 object IfStmt {
 
   def apply(if_lit: Terminal, cond: Expression, if_block: Option[Block], else_block: Option[(Terminal, Option[Block])]): IfStmt = {
@@ -370,7 +374,7 @@ object IfStmt {
       case None => (null, null, null, null)
     }
     val (else_kw, else_indent, else_body, else_dedent) = tp
-    IfStmt(if_lit :: cond :: if_indent :: if_body :: if_dedent :: else_kw :: else_indent :: else_body :: else_dedent :: Nil)
+    new IfStmt(if_lit, cond, if_indent, if_body, if_dedent, else_kw, else_indent, else_body, else_dedent)
   }
 
 }
@@ -378,7 +382,8 @@ object IfStmt {
 case class VarDefStmt (variableDef: VariableDef) extends UnaryBranch(variableDef) with Statement
 
 // Definitions
-case class VariableDef private (args: List[ParsingTree]) extends ListVararg(args) with Definition
+case class VariableDef private (mod: Terminal, identifier: Terminal, colon: Terminal, type_name: Name, eq: Terminal, assignment: Expression)
+  extends VarargBranch(mod, identifier, colon, type_name, eq, assignment) with Definition
 
 object VariableDef {
   // (VAR | VAL) IDENTIFIER COLON? NameExpression? EQUALS? Expression?
@@ -386,19 +391,23 @@ object VariableDef {
     val (colon, type_name) = OptionalArgConverter.orNull(type_opt)
     val (eq, assignment) = OptionalArgConverter.orNull(assignment_opt)
 
-    VariableDef(mod :: identifier :: colon :: type_name :: eq :: assignment :: Nil)
+    VariableDef(mod, identifier, colon, type_name, eq, assignment)
   }
 }
 
 case class ParameterDef(identifier: Terminal, colon: Terminal, name: Name) extends TernaryBranch(identifier, colon, name) with Definition
 
-case class TypeParamDef private (args: List[ParsingTree]) extends ListVararg(args) with Definition
+case class TypeParamDef private (identifier: Terminal, type_bound: TypeBound) extends VarargBranch(identifier, type_bound) with Definition
 
 object TypeParamDef {
-  def apply(identifier: Terminal, typeBound: Option[TypeBound]): TypeParamDef = TypeParamDef(identifier :: typeBound.orNull :: Nil)
+  def apply(identifier: Terminal, typeBound: Option[TypeBound]): TypeParamDef = TypeParamDef(identifier, typeBound.orNull)
 }
 
-case class FunctionDef private (args: List[ParsingTree]) extends ListVararg(args) with Definition
+case class FunctionDef private (modifiers: GrammarList, definition: Terminal, name: Terminal,
+                                lp: Terminal, args_list: SeparatedList, rp: Terminal,
+                                ret_kw: Terminal, ret_type: Name,
+                                indent: Terminal, body: GrammarList, dedent: Terminal)
+  extends VarargBranch(modifiers, definition, name, lp, args_list, rp, ret_kw, ret_type, indent, body, dedent) with Definition
 
 object FunctionDef {
   def apply(modifiers: GrammarList, definition: Terminal, name: Terminal, lp: Terminal, args_opt: Option[SeparatedList], rp: Terminal, ret_type_opt: Option[(Terminal, Name)], block: Option[Block]): FunctionDef = {
@@ -407,11 +416,15 @@ object FunctionDef {
     val (ret_kw, ret_type) = OptionalArgConverter.orNull(ret_type_opt)
     val (indent, body, dedent) = OptionalArgConverter.orNull(block)
 
-    FunctionDef(modifiers :: definition :: name :: lp :: args_list :: rp :: ret_kw :: ret_type :: indent :: body :: dedent :: Nil)
+    new FunctionDef(modifiers, definition, name, lp, args_list, rp, ret_kw, ret_type, indent, body, dedent)
   }
 }
 
-case class TypeDefinition private (args: List[ParsingTree]) extends ListVararg(args) with Definition
+// TypeDefinition(mod :: identifier :: less :: params :: greater :: bound :: indent :: body :: dedent :: Nil)
+case class TypeDefinition private (mod: Terminal, identifier: Terminal,
+                                   less: ParsingTree, params: ParsingTree, greater: ParsingTree, bound: TypeBound,
+                                   indent: Terminal, body: GrammarList, dedent : Terminal)
+  extends VarargBranch(mod, identifier, less, params, greater, bound,  indent, body, dedent) with Definition
 
 object TypeDefinition {
   // TODO: see todo in grammar on this rule
@@ -429,7 +442,7 @@ object TypeDefinition {
     val bound = bound_opt.orNull
     val (indent, body, dedent) = OptionalArgConverter.orNull(block)
 
-    TypeDefinition(mod :: identifier :: less :: params :: greater :: bound :: indent :: body :: dedent :: Nil)
+    new TypeDefinition(mod, identifier, less, params, greater, bound, indent, body, dedent)
   }
 }
 
