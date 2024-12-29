@@ -304,13 +304,10 @@ case class BreakStmt(op: Terminal) extends UnaryBranch(op) with Statement
 
 case class ContinueStmt(op: Terminal) extends UnaryBranch(op) with Statement
 
-case class ReturnStmt(args: List[ParsingTree]) extends ListVararg(args) with Statement
+case class ReturnStmt private (ret: Terminal, ret_val: Expression) extends VarargBranch(ret, ret_val) with Statement
 
 case object ReturnStmt {
-  def apply(ret: Terminal, ret_val_opt: Option[Expression]): Statement = {
-    val ret_val: Expression = ret_val_opt.orNull
-    ReturnStmt(ret :: ret_val :: Nil)
-  }
+  def apply(ret: Terminal, ret_val_opt: Option[Expression]): Statement = new ReturnStmt(ret, ret_val_opt.orNull)
 }
 
 case class ExprStmt(expr: Expression) extends UnaryBranch(expr) with Statement
