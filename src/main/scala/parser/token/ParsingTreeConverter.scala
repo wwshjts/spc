@@ -8,7 +8,7 @@ import syspro.tm.parser.AnySyntaxKind
 import syspro.tm.lexer.{BooleanLiteralToken, Keyword, Symbol}
 
 object ParsingTreeConverter {
-  def apply(tree: ParsingTree): AnySyntaxKind = tree match
+  def apply(tree: PTree): AnySyntaxKind = tree match
     case grammar: Grammar => grammar match
       case _: SourceText => SyntaxKind.SOURCE_TEXT
       case terminal: Terminal => terminal match

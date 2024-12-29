@@ -1,7 +1,7 @@
 package org.syspro.spc
 package parser.token
 
-import org.syspro.spc.parser.parsing_tree.{AMPERSAND_AMPERSAND, BAD, DSLEntity, ParsingTree, Symbol, Terminal}
+import org.syspro.spc.parser.parsing_tree.{AMPERSAND_AMPERSAND, BAD, DSLEntity, PTree, Symbol, Terminal}
 import org.syspro.spc.parser.parsing_tree
 import syspro.tm.lexer
 import syspro.tm.lexer.{IdentifierToken, Keyword, KeywordToken, Token}

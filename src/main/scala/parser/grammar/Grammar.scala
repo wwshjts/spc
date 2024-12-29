@@ -71,7 +71,7 @@ object Grammar extends syspro.tm.parser.Parser {
   }
 
   case class AlmostGeneric(identifier: Terminal, left: Terminal, parameters: SeparatedList)
-  case class IncompleteGenericParams(params: List[ParsingTree], incomplete: AlmostGeneric)
+  case class IncompleteGenericParams(params: List[PTree], incomplete: AlmostGeneric)
 
   def generic: Parser[GenericName] = IDENTIFIER ~ "<" ~ generic_parameters ~ ">" ^^ { parsed =>
     val (((i, lt), sep), gt) = parsed
@@ -280,11 +280,11 @@ object Grammar extends syspro.tm.parser.Parser {
     TypeDefinition(mod, name, sepList, bound_opt, block)
   }
 
-  def source_text: Parser[ParsingTree] = |**(type_def) ^^ { parsed =>
+  def source_text: Parser[PTree] = |**(type_def) ^^ { parsed =>
     SourceText(GrammarList(parsed))
   }
 
-  def block[A <: ParsingTree](p: Parser[A]): Parser[Block] = INDENT ~ (|**(p) ^^ GrammarList) ~ DEDENT ^^ { parsed =>
+  def block[A <: PTree](p: Parser[A]): Parser[Block] = INDENT ~ (|**(p) ^^ GrammarList) ~ DEDENT ^^ { parsed =>
     val ((indent, list), dedent) = parsed
     Block(indent, list, dedent)
   }
@@ -315,17 +315,17 @@ object Grammar extends syspro.tm.parser.Parser {
     )
   }
 
-  def flatten1[A <: ParsingTree, B <: ParsingTree, C <: ParsingTree](repr: (A, ((B,C), List[(B, C)]))): (A, B, C, List[(B, C)]) = {
+  def flatten1[A <: PTree, B <: PTree, C <: PTree](repr: (A, ((B,C), List[(B, C)]))): (A, B, C, List[(B, C)]) = {
     val (first, ((second, third), tail)) = repr
     (first, second, third, tail)
   }
 
-  def foldFirst[A <: ParsingTree, B <: ParsingTree, C <: ParsingTree, T <: TernaryBranch](repr: (A, B, C, List[(B, C)]))( f: (A, B, C) => T): (T, List[(B, C)]) = {
+  def foldFirst[A <: PTree, B <: PTree, C <: PTree, T <: TernaryBranch](repr: (A, B, C, List[(B, C)]))(f: (A, B, C) => T): (T, List[(B, C)]) = {
     val (a, b, c, tail) = repr
     (f(a, b, c), tail)
   }
 
-  def foldTernary[T <: TernaryBranch, A <: ParsingTree, B <: ParsingTree](repr: (T, List[(A, B)]))(f: (T, A, B) => T): T = {
+  def foldTernary[T <: TernaryBranch, A <: PTree, B <: PTree](repr: (T, List[(A, B)]))(f: (T, A, B) => T): T = {
     val (first, tail) = repr
     tail.foldLeft(first)( (left, term) =>
       val (op, right) = term

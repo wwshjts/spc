@@ -1,12 +1,15 @@
 package org.syspro.spc
 package parser.parsing_tree
 
+import org.syspro.spc.language_server.VariableSemantic
 import org.syspro.spc.parser.parsing_tree
 import org.syspro.spc.parser.token.ParsingTreeConverter
 import org.w3c.dom.css.Counter
 import syspro.tm.lexer.Token
 import syspro.tm.parser.{AnySyntaxKind, SyntaxKind, SyntaxNode}
+import syspro.tm.symbols.{SemanticSymbol, SyntaxNodeWithSymbols}
 
+sealed trait Semantic(semantic: SemanticSymbol)
 
 /**
  * Represents IR of spc compiler parser
@@ -15,11 +18,16 @@ import syspro.tm.parser.{AnySyntaxKind, SyntaxKind, SyntaxNode}
  * IR of compiler split into two different trait families
  * This partitioning allows for a flexible internal representation
  *
+ * This trait inherit `SyntaxNodeWithSymbols` cause I use PTree in my code, but no `SyntaxNode`,
+ * So I can't build nice hierarchy without refactoring all code
+ * And I decide to mark all Nodes as `SyntaxNodeWithSymbols`, but
+ * give nontrivial implementation of `symbol()` to nodes that really have semantic
+ *
  * @see Tree
  * @see Grammar
  */
-sealed trait ParsingTree extends SyntaxNode {
-  def apply(index: Int): Option[ParsingTree]
+sealed trait PTree extends SyntaxNodeWithSymbols {
+  def apply(index: Int): Option[PTree]
   def rank(): Int
   def token(): Token
 
@@ -29,23 +37,23 @@ sealed trait ParsingTree extends SyntaxNode {
 }
 
 // ------------------ Tree ------------------
-sealed trait Tree extends ParsingTree {
-  def apply(index: Int): Option[ParsingTree]
+sealed trait Tree extends PTree {
+  def apply(index: Int): Option[PTree]
   def rank(): Int
 }
 
 sealed trait Branch extends Tree
 
-sealed trait UnaryBranch(branch: ParsingTree) extends Branch {
-  override def apply(index: Int): Option[ParsingTree] = index match
+sealed trait UnaryBranch(branch: PTree) extends Branch {
+  override def apply(index: Int): Option[PTree] = index match
     case 0 => Some(branch)
     case _ => None
 
   override def rank() = 1
 }
 
-sealed trait BinaryBranch(left: ParsingTree, right: ParsingTree) extends Branch {
-  override def apply(index: Int): Option[ParsingTree] = index match
+sealed trait BinaryBranch(left: PTree, right: PTree) extends Branch {
+  override def apply(index: Int): Option[PTree] = index match
     case 0 => Some(left)
     case 1 => Some(right)
     case _ => None
@@ -53,8 +61,8 @@ sealed trait BinaryBranch(left: ParsingTree, right: ParsingTree) extends Branch 
   override def rank() = 2
 }
 
-sealed trait TernaryBranch(first: ParsingTree, second: ParsingTree, third: ParsingTree) extends Branch {
-  override def apply(index: Int): Option[ParsingTree] = index match
+sealed trait TernaryBranch(first: PTree, second: PTree, third: PTree) extends Branch {
+  override def apply(index: Int): Option[PTree] = index match
     case 0 => Some(first)
     case 1 => Some(second)
     case 2 => Some(third)
@@ -63,20 +71,20 @@ sealed trait TernaryBranch(first: ParsingTree, second: ParsingTree, third: Parsi
   override def rank(): Int = 3
 }
 
-abstract class VarargBranch(args: ParsingTree*) extends Branch {
-  override def apply(index: Int): Option[ParsingTree] = if (args.isDefinedAt(index)) Some(args(index)) else None
+abstract class VarargBranch(args: PTree*) extends Branch {
+  override def apply(index: Int): Option[PTree] = if (args.isDefinedAt(index)) Some(args(index)) else None
 
   override def rank(): Int = args.size
 }
 
-abstract class ListVararg(args: List[ParsingTree]) extends Branch {
-  override def apply(index: Int): Option[ParsingTree] = if (args.isDefinedAt(index)) Some(args(index)) else None
+abstract class ListVararg(args: List[PTree]) extends Branch {
+  override def apply(index: Int): Option[PTree] = if (args.isDefinedAt(index)) Some(args(index)) else None
 
   override def rank(): Int = args.size
 }
 
 object ListVararg {
-  def optionalVarargs(opt: Option[ParsingTree]*):List[ParsingTree] = opt.toList.flatMap {
+  def optionalVarargs(opt: Option[PTree]*):List[PTree] = opt.toList.flatMap {
     case Some(value) => List(value)
     case None => List.empty
   }
@@ -84,14 +92,14 @@ object ListVararg {
 }
 
 sealed trait Leaf extends Tree {
-  override def apply(index: Int): Option[ParsingTree] = None
+  override def apply(index: Int): Option[PTree] = None
 
   override def rank(): Int = 0
 }
 // ---------------------------------------------
 
 // ------------------ Grammar ------------------
-sealed trait Grammar extends ParsingTree {
+sealed trait Grammar extends PTree {
   override def token(): Token = null
 }
 
@@ -198,18 +206,18 @@ case class OBJECT(tkn: Token)         extends Leaf with Terminal(tkn)
 case class INTERFACE(tkn: Token)      extends Leaf with Terminal(tkn)
 
 // some real shit
-sealed abstract class ProtoList(trees: List[ParsingTree]) extends ListVararg(trees) with Grammar
-case class SeparatedList private (trees: List[ParsingTree]) extends ProtoList(trees)
+sealed abstract class ProtoList(trees: List[PTree]) extends ListVararg(trees) with Grammar
+case class SeparatedList private (trees: List[PTree]) extends ProtoList(trees)
 
 // It is done only for checker module compatibility
 case object SeparatedList {
-  def apply(trees: List[ParsingTree]): SeparatedList = if trees.nonEmpty then new SeparatedList(trees) else null
+  def apply(trees: List[PTree]): SeparatedList = if trees.nonEmpty then new SeparatedList(trees) else null
 }
-case class GrammarList private (trees: List[ParsingTree])   extends ProtoList(trees)
+case class GrammarList private (trees: List[PTree])   extends ProtoList(trees)
 
 // It is done only for checker module compatibility
 case object GrammarList {
-  def apply(trees: List[ParsingTree]): GrammarList = if trees.nonEmpty then new GrammarList(trees) else null
+  def apply(trees: List[PTree]): GrammarList = if trees.nonEmpty then new GrammarList(trees) else null
 }
 case class TypeBound(bound: Terminal, separatedList: SeparatedList) extends BinaryBranch(bound, separatedList) with Grammar
 
@@ -217,11 +225,11 @@ sealed abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(termin
 /**
  * Trait which specify branch with only one descendant
  */
-sealed abstract class UnaryExpr(operation: Terminal, operand: ParsingTree) extends BinaryBranch(operation, operand) with Expression {}
+sealed abstract class UnaryExpr(operation: Terminal, operand: PTree) extends BinaryBranch(operation, operand) with Expression {}
 
-case class Negate(operation: Terminal, operand: ParsingTree)       extends UnaryExpr(operation, operand)
-case class UPlus(operation: Terminal, operand: ParsingTree)        extends UnaryExpr(operation, operand)
-case class BitwiseNot(operation: Terminal, operand: ParsingTree)   extends UnaryExpr(operation, operand)
+case class Negate(operation: Terminal, operand: PTree)       extends UnaryExpr(operation, operand)
+case class UPlus(operation: Terminal, operand: PTree)        extends UnaryExpr(operation, operand)
+case class BitwiseNot(operation: Terminal, operand: PTree)   extends UnaryExpr(operation, operand)
 
 case class StringLiteral(op: Terminal)          extends LiteralExpr(op)
 case class IntegerLiteral(op: Terminal)         extends LiteralExpr(op)
@@ -233,49 +241,49 @@ case class SuperExpr(op: Terminal)              extends LiteralExpr(op)
 case class NullLiteral(op: Terminal)            extends LiteralExpr(op)
 
 case class IdentifierName(op: Terminal)                 extends UnaryBranch(op) with Name
-case class OptionName(op: Terminal, name: ParsingTree)  extends BinaryBranch(op, name) with Name
+case class OptionName(op: Terminal, name: PTree)  extends BinaryBranch(op, name) with Name
 case class GenericName(i: Terminal, l: Terminal, separatedList: SeparatedList, r: Terminal) extends VarargBranch(i, l, separatedList, r) with Name
 
-case class GroupBy(leftb: Terminal, expr: ParsingTree, rightb: Terminal)              extends TernaryBranch(leftb, expr, rightb) with Primary
-case class MemberAccess(left: ParsingTree, dot: Terminal, i: Terminal)                extends TernaryBranch(left, dot, i) with Primary
-case class Index(indexed: ParsingTree, l: Terminal, index: ParsingTree, r: Terminal)  extends VarargBranch(indexed, l, index, r) with Primary
-case class Invoke(i: ParsingTree, lp: Terminal, list: SeparatedList, rp: Terminal)    extends VarargBranch(i, lp, list, rp) with Primary
+case class GroupBy(leftb: Terminal, expr: PTree, rightb: Terminal)              extends TernaryBranch(leftb, expr, rightb) with Primary
+case class MemberAccess(left: PTree, dot: Terminal, i: Terminal)                extends TernaryBranch(left, dot, i) with Primary
+case class Index(indexed: PTree, l: Terminal, index: PTree, r: Terminal)  extends VarargBranch(indexed, l, index, r) with Primary
+case class Invoke(i: PTree, lp: Terminal, list: SeparatedList, rp: Terminal)    extends VarargBranch(i, lp, list, rp) with Primary
 
-case class IsExpression private (args: ParsingTree*) extends VarargBranch(args*) with Expression
+case class IsExpression private (args: PTree*) extends VarargBranch(args*) with Expression
 case object IsExpression {
-  def apply(expr: ParsingTree, is: Terminal, name_expr: Name) = new IsExpression(expr, is, name_expr)
-  def apply(expr: ParsingTree, is: Terminal, name_expr: Name, opt: Terminal) = new IsExpression(expr, is, name_expr, opt)
+  def apply(expr: PTree, is: Terminal, name_expr: Name) = new IsExpression(expr, is, name_expr)
+  def apply(expr: PTree, is: Terminal, name_expr: Name, opt: Terminal) = new IsExpression(expr, is, name_expr, opt)
 }
 
-sealed abstract class BinaryExpression(left: ParsingTree, op: Terminal, right: ParsingTree) extends TernaryBranch(left, op, right) with Expression {}
+sealed abstract class BinaryExpression(left: PTree, op: Terminal, right: PTree) extends TernaryBranch(left, op, right) with Expression {}
 
-case class ADD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
-case class SUBTRACT(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
+case class ADD(left: PTree, op: Terminal, right: PTree)       extends BinaryExpression(left, op, right)
+case class SUBTRACT(left: PTree, op: Terminal, right: PTree)  extends BinaryExpression(left, op, right)
 
-case class MULTIPLY(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
-case class DIV(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
-case class MOD(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
+case class MULTIPLY(left: PTree, op: Terminal, right: PTree)  extends BinaryExpression(left, op, right)
+case class DIV(left: PTree, op: Terminal, right: PTree)       extends BinaryExpression(left, op, right)
+case class MOD(left: PTree, op: Terminal, right: PTree)       extends BinaryExpression(left, op, right)
 
-case class LEFT_SHIFT(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
-case class RIGHT_SHIFT(left: ParsingTree, op: Terminal, right: ParsingTree) extends BinaryExpression(left, op, right)
+case class LEFT_SHIFT(left: PTree, op: Terminal, right: PTree)  extends BinaryExpression(left, op, right)
+case class RIGHT_SHIFT(left: PTree, op: Terminal, right: PTree) extends BinaryExpression(left, op, right)
 
-case class BitwiseAnd(left: ParsingTree, op: Terminal, right: ParsingTree)  extends BinaryExpression(left, op, right)
-case class BitwiseOr(left: ParsingTree, op: Terminal, right: ParsingTree)   extends BinaryExpression(left, op, right)
-case class Xor(left: ParsingTree, op: Terminal, right: ParsingTree)         extends BinaryExpression(left, op, right)
+case class BitwiseAnd(left: PTree, op: Terminal, right: PTree)  extends BinaryExpression(left, op, right)
+case class BitwiseOr(left: PTree, op: Terminal, right: PTree)   extends BinaryExpression(left, op, right)
+case class Xor(left: PTree, op: Terminal, right: PTree)         extends BinaryExpression(left, op, right)
 
-case class AND(left: ParsingTree, op: Terminal, right: ParsingTree)         extends BinaryExpression(left, op, right)
-case class OR(left: ParsingTree, op: Terminal, right: ParsingTree)          extends BinaryExpression(left, op, right)
-case class NOT(ex: Terminal, operand: ParsingTree)                          extends UnaryExpr(ex, operand)
+case class AND(left: PTree, op: Terminal, right: PTree)         extends BinaryExpression(left, op, right)
+case class OR(left: PTree, op: Terminal, right: PTree)          extends BinaryExpression(left, op, right)
+case class NOT(ex: Terminal, operand: PTree)                          extends UnaryExpr(ex, operand)
 
-case class LessThan(left: ParsingTree, op: Terminal, right: ParsingTree)    extends BinaryExpression(left, op, right)
-case class GreaterThan(left: ParsingTree, op: Terminal, right: ParsingTree) extends BinaryExpression(left, op, right)
-case class LessOrEq(left: ParsingTree, op: Terminal, right: ParsingTree)    extends BinaryExpression(left, op, right)
-case class GreaterOrEq(left: ParsingTree, op: Terminal, right: ParsingTree) extends BinaryExpression(left, op, right)
-case class Equal(left: ParsingTree, op: Terminal, right: ParsingTree)       extends BinaryExpression(left, op, right)
-case class NEqual(left: ParsingTree, op: Terminal, right: ParsingTree)      extends BinaryExpression(left, op, right)
+case class LessThan(left: PTree, op: Terminal, right: PTree)    extends BinaryExpression(left, op, right)
+case class GreaterThan(left: PTree, op: Terminal, right: PTree) extends BinaryExpression(left, op, right)
+case class LessOrEq(left: PTree, op: Terminal, right: PTree)    extends BinaryExpression(left, op, right)
+case class GreaterOrEq(left: PTree, op: Terminal, right: PTree) extends BinaryExpression(left, op, right)
+case class Equal(left: PTree, op: Terminal, right: PTree)       extends BinaryExpression(left, op, right)
+case class NEqual(left: PTree, op: Terminal, right: PTree)      extends BinaryExpression(left, op, right)
 
 object BinaryExpression {
-  def apply(left: ParsingTree, op: Terminal, right: ParsingTree): Expression = {
+  def apply(left: PTree, op: Terminal, right: PTree): Expression = {
     op match
       case t: PLUS        => ADD(left, op, right)
       case t: MINUS       => SUBTRACT(left, op, right)
@@ -316,13 +324,13 @@ case class Assignment(left: Primary, op: Terminal, right: Expression) extends Va
 
 // Supplementary nodes
 case class Block(indent: Terminal, body: GrammarList, dedent: Terminal) extends TernaryBranch(indent, body, dedent) with Supplementary {
-  def toList: List[ParsingTree] = indent :: body :: dedent :: Nil
+  def toList: List[PTree] = indent :: body :: dedent :: Nil
   def asTuple: (Terminal, GrammarList, Terminal) = (indent, body, dedent)
 }
 
 /** Not really suitable node for my IR, needed for compatibility with testing module */
 object OptionalArgConverter {
-  def orNull[A <: ParsingTree, B <: ParsingTree](args: Option[(A, B)]): (A, B) =
+  def orNull[A <: PTree, B <: PTree](args: Option[(A, B)]): (A, B) =
     if (args.isEmpty)
       (null.asInstanceOf[A], null.asInstanceOf[B])
     else
@@ -342,7 +350,7 @@ object ForStmt {
 
   def apply(fr: Terminal, elem: Primary, in: Terminal, collection: Expression, stmt_block: Option[Block]): Statement = {
 
-    val s: List[ParsingTree] = fr :: elem :: in :: collection :: Nil
+    val s: List[PTree] = fr :: elem :: in :: collection :: Nil
     val (indent, body, dedent) = OptionalArgConverter.orNull(stmt_block)
 
     new ForStmt(fr, elem, in, collection, indent, body, dedent)
@@ -382,8 +390,11 @@ object IfStmt {
 case class VarDefStmt (variableDef: VariableDef) extends UnaryBranch(variableDef) with Statement
 
 // Definitions
-case class VariableDef private (mod: Terminal, identifier: Terminal, colon: Terminal, type_name: Name, eq: Terminal, assignment: Expression)
-  extends VarargBranch(mod, identifier, colon, type_name, eq, assignment) with Definition
+case class VariableDef private (mod: Terminal, identifier: Terminal, colon: Terminal, type_name: Name, eq: Terminal, assignment: Expression, semantic: VariableSemantic)
+  extends VarargBranch(mod, identifier, colon, type_name, eq, assignment) with Definition with Semantic(semantic) {
+
+ def addSemantic(semantic: VariableSemantic) = new VariableDef(mod, identifier, colon, type_name, eq, assignment, semantic)
+}
 
 object VariableDef {
   // (VAR | VAL) IDENTIFIER COLON? NameExpression? EQUALS? Expression?
@@ -391,7 +402,7 @@ object VariableDef {
     val (colon, type_name) = OptionalArgConverter.orNull(type_opt)
     val (eq, assignment) = OptionalArgConverter.orNull(assignment_opt)
 
-    VariableDef(mod, identifier, colon, type_name, eq, assignment)
+    VariableDef(mod, identifier, colon, type_name, eq, assignment, null)
   }
 }
 
@@ -422,17 +433,17 @@ object FunctionDef {
 
 // TypeDefinition(mod :: identifier :: less :: params :: greater :: bound :: indent :: body :: dedent :: Nil)
 case class TypeDefinition private (mod: Terminal, identifier: Terminal,
-                                   less: ParsingTree, params: ParsingTree, greater: ParsingTree, bound: TypeBound,
+                                   less: PTree, params: PTree, greater: PTree, bound: TypeBound,
                                    indent: Terminal, body: GrammarList, dedent : Terminal)
   extends VarargBranch(mod, identifier, less, params, greater, bound,  indent, body, dedent) with Definition
 
 object TypeDefinition {
   // TODO: see todo in grammar on this rule
-  def apply(mod: Terminal, identifier: Terminal, params_opt: List[ParsingTree], bound_opt: Option[TypeBound], block: Option[Block]): TypeDefinition = {
+  def apply(mod: Terminal, identifier: Terminal, params_opt: List[PTree], bound_opt: Option[TypeBound], block: Option[Block]): TypeDefinition = {
 
-    var less: ParsingTree = null
-    var params: ParsingTree = null
-    var greater: ParsingTree = null
+    var less: PTree = null
+    var params: PTree = null
+    var greater: PTree = null
 
     if (params_opt.nonEmpty)
       less = params_opt(0)
