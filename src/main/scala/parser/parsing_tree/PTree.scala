@@ -1,7 +1,7 @@
 package org.syspro.spc
 package parser.parsing_tree
 
-import org.syspro.spc.language_server.VariableSemantic
+import org.syspro.spc.language_server.{FunctionSemantic, VariableSemantic}
 import org.syspro.spc.parser.parsing_tree
 import org.syspro.spc.parser.token.ParsingTreeConverter
 import org.w3c.dom.css.Counter
@@ -417,8 +417,11 @@ object TypeParamDef {
 case class FunctionDef private (modifiers: GrammarList, definition: Terminal, name: Terminal,
                                 lp: Terminal, args_list: SeparatedList, rp: Terminal,
                                 ret_kw: Terminal, ret_type: Name,
-                                indent: Terminal, body: GrammarList, dedent: Terminal)
-  extends VarargBranch(modifiers, definition, name, lp, args_list, rp, ret_kw, ret_type, indent, body, dedent) with Definition
+                                indent: Terminal, body: GrammarList, dedent: Terminal, semantic: FunctionSemantic)
+  extends VarargBranch(modifiers, definition, name, lp, args_list, rp, ret_kw, ret_type, indent, body, dedent) with Definition with Semantic(semantic) {
+
+  def addSemantic(semantic: FunctionSemantic): FunctionDef = new FunctionDef(modifiers, definition, name, lp, args_list, rp, ret_kw, ret_type, indent, body, dedent, semantic)
+}
 
 object FunctionDef {
   def apply(modifiers: GrammarList, definition: Terminal, name: Terminal, lp: Terminal, args_opt: Option[SeparatedList], rp: Terminal, ret_type_opt: Option[(Terminal, Name)], block: Option[Block]): FunctionDef = {
@@ -427,7 +430,7 @@ object FunctionDef {
     val (ret_kw, ret_type) = OptionalArgConverter.orNull(ret_type_opt)
     val (indent, body, dedent) = OptionalArgConverter.orNull(block)
 
-    new FunctionDef(modifiers, definition, name, lp, args_list, rp, ret_kw, ret_type, indent, body, dedent)
+    new FunctionDef(modifiers, definition, name, lp, args_list, rp, ret_kw, ret_type, indent, body, dedent, null)
   }
 }
 

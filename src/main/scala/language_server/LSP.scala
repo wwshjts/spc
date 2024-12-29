@@ -7,9 +7,9 @@ import lexer.Lexer
 import parser.grammar.Grammar
 import parser.grammar.Grammar.{PResult, expression, variable_def}
 
-import org.syspro.spc.parser.parsing_tree.{FunctionDef, GenericName, IdentifierName, OptionName, PTree, VariableDef, IDENTIFIER}
+import org.syspro.spc.parser.parsing_tree.{FunctionDef, GenericName, IDENTIFIER, IdentifierName, OptionName, PTree, VariableDef}
 import syspro.tm.parser.{Diagnostic, SyntaxKind, SyntaxNode, TextSpan}
-import syspro.tm.symbols.{SemanticSymbol, SymbolKind, TypeSymbol}
+import syspro.tm.symbols.{SemanticSymbol, SymbolKind, TypeSymbol, VariableSymbol}
 
 import java.util
 import scala.collection.mutable
@@ -70,8 +70,26 @@ object LSP extends symbols.LanguageServer {
    * @param functionDef functionDefinition without any semantic
    * @return new `FunctionDef` that actually have semantic
    */
-  def concreteFunction(functionDef: FunctionDef): FunctionDef = {
-    ???
+  def concreteFunction(functionDef: FunctionDef)(scope: Scope): FunctionDef = {
+    val funcName = functionDef.name.asInstanceOf[IDENTIFIER].tkn.toString
+
+    val f = FunctionSemantic(
+      mods = ???,
+      parameters = ???,
+      returnType = {
+        functionDef.ret_type match
+          case IdentifierName(op) => if builtInTypes contains op.token().toString then null else lookUp()
+          case OptionName(op, name) => ???
+          case GenericName(i, l, separatedList, r) => if builtInTypes contains i.token().toString then null else lookUp()
+      },
+      locals = new util.ArrayList[VariableSymbol](), // will be added when function scope travers will be performed
+      owner = scope.get,
+      kind = SymbolKind.FUNCTION,
+      name = funcName,
+      definition = functionDef
+    )
+
+    functionDef.addSemantic(f)
   }
 
   /**
