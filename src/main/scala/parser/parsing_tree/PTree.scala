@@ -200,18 +200,23 @@ case class DEF(tkn: Token)            extends Leaf with Terminal(tkn)
 case class ABSTRACT(tkn: Token)       extends Leaf with Terminal(tkn)
 case class VIRTUAL(tkn: Token)        extends Leaf with Terminal(tkn)
 case class OVERRIDE(tkn: Token)       extends Leaf with Terminal(tkn)
+
 case class NATIVE(tkn: Token)         extends Leaf with Terminal(tkn)
-case class CLASS(tkn: Token)          extends Leaf with Terminal(tkn)
-case class OBJECT(tkn: Token)         extends Leaf with Terminal(tkn)
-case class INTERFACE(tkn: Token)      extends Leaf with Terminal(tkn)
+sealed abstract class TypeModifier(tkn: Token) extends Leaf with Terminal(tkn)
+case class CLASS(tkn: Token)          extends TypeModifier(tkn)
+case class OBJECT(tkn: Token)         extends TypeModifier(tkn)
+case class INTERFACE(tkn: Token)      extends TypeModifier(tkn)
+
 
 // some real shit
 sealed abstract class ProtoList(trees: List[PTree]) extends ListVararg(trees) with Grammar
-case class SeparatedList private (trees: List[PTree]) extends ProtoList(trees)
+case class SeparatedList[A] private (trees: List[PTree]) extends ProtoList(trees) {
+  def dropSeparators: List[A] = trees.zipWithIndex.filter(_._2 % 2 == 0).map(_.asInstanceOf[A])
+}
 
 // It is done only for checker module compatibility
 case object SeparatedList {
-  def apply(trees: List[PTree]): SeparatedList = if trees.nonEmpty then new SeparatedList(trees) else null
+  def apply[A](trees: List[PTree]): SeparatedList[A] = if trees.nonEmpty then new SeparatedList(trees) else null
 }
 case class GrammarList private (trees: List[PTree])   extends ProtoList(trees)
 
@@ -219,7 +224,7 @@ case class GrammarList private (trees: List[PTree])   extends ProtoList(trees)
 case object GrammarList {
   def apply(trees: List[PTree]): GrammarList = if trees.nonEmpty then new GrammarList(trees) else null
 }
-case class TypeBound(bound: Terminal, separatedList: SeparatedList) extends BinaryBranch(bound, separatedList) with Grammar
+case class TypeBound(bound: Terminal, separatedList: SeparatedList[Name]) extends BinaryBranch(bound, separatedList) with Grammar
 
 sealed abstract class LiteralExpr(terminal: Terminal) extends UnaryBranch(terminal) with Atom
 /**
@@ -242,12 +247,12 @@ case class NullLiteral(op: Terminal)            extends LiteralExpr(op)
 
 case class IdentifierName(op: Terminal)                 extends UnaryBranch(op) with Name
 case class NullName(op: Terminal, name: PTree)  extends BinaryBranch(op, name) with Name
-case class GenericName(i: Terminal, l: Terminal, separatedList: SeparatedList, r: Terminal) extends VarargBranch(i, l, separatedList, r) with Name
+case class GenericName(i: Terminal, l: Terminal, separatedList: SeparatedList[Name], r: Terminal) extends VarargBranch(i, l, separatedList, r) with Name
 
 case class GroupBy(leftb: Terminal, expr: PTree, rightb: Terminal)              extends TernaryBranch(leftb, expr, rightb) with Primary
 case class MemberAccess(left: PTree, dot: Terminal, i: Terminal)                extends TernaryBranch(left, dot, i) with Primary
 case class Index(indexed: PTree, l: Terminal, index: PTree, r: Terminal)  extends VarargBranch(indexed, l, index, r) with Primary
-case class Invoke(i: PTree, lp: Terminal, list: SeparatedList, rp: Terminal)    extends VarargBranch(i, lp, list, rp) with Primary
+case class Invoke(i: PTree, lp: Terminal, list: SeparatedList[Expression], rp: Terminal)    extends VarargBranch(i, lp, list, rp) with Primary
 
 case class IsExpression private (args: PTree*) extends VarargBranch(args*) with Expression
 case object IsExpression {
@@ -415,7 +420,7 @@ object TypeParamDef {
 }
 
 case class FunctionDef private (modifiers: GrammarList, definition: Terminal, name: Terminal,
-                                lp: Terminal, args_list: SeparatedList, rp: Terminal,
+                                lp: Terminal, args_list: SeparatedList[ParameterDef], rp: Terminal,
                                 ret_kw: Terminal, ret_type: Name,
                                 indent: Terminal, body: GrammarList, dedent: Terminal, semantic: FunctionSemantic)
   extends VarargBranch(modifiers, definition, name, lp, args_list, rp, ret_kw, ret_type, indent, body, dedent) with Definition with Semantic(semantic) {
@@ -424,7 +429,7 @@ case class FunctionDef private (modifiers: GrammarList, definition: Terminal, na
 }
 
 object FunctionDef {
-  def apply(modifiers: GrammarList, definition: Terminal, name: Terminal, lp: Terminal, args_opt: Option[SeparatedList], rp: Terminal, ret_type_opt: Option[(Terminal, Name)], block: Option[Block]): FunctionDef = {
+  def apply(modifiers: GrammarList, definition: Terminal, name: Terminal, lp: Terminal, args_opt: Option[SeparatedList[ParameterDef]], rp: Terminal, ret_type_opt: Option[(Terminal, Name)], block: Option[Block]): FunctionDef = {
 
     val args_list = args_opt.orNull
     val (ret_kw, ret_type) = OptionalArgConverter.orNull(ret_type_opt)
@@ -436,7 +441,7 @@ object FunctionDef {
 
 // TypeDefinition(mod :: identifier :: less :: params :: greater :: bound :: indent :: body :: dedent :: Nil)
 case class TypeDefinition private (mod: Terminal, identifier: Terminal,
-                                   less: PTree, params: PTree, greater: PTree, bound: TypeBound,
+                                   less: Terminal, params: SeparatedList[TypeParamDef], greater: Terminal, bound: TypeBound,
                                    indent: Terminal, body: GrammarList, dedent : Terminal)
   extends VarargBranch(mod, identifier, less, params, greater, bound,  indent, body, dedent) with Definition
 
@@ -456,7 +461,7 @@ object TypeDefinition {
     val bound = bound_opt.orNull
     val (indent, body, dedent) = OptionalArgConverter.orNull(block)
 
-    new TypeDefinition(mod, identifier, less, params, greater, bound, indent, body, dedent)
+    new TypeDefinition(mod, identifier, less.asInstanceOf[Terminal], params.asInstanceOf[SeparatedList[TypeParamDef]], greater.asInstanceOf[Terminal], bound, indent, body, dedent)
   }
 }
 

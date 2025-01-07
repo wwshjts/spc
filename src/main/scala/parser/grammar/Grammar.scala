@@ -54,7 +54,7 @@ object Grammar extends syspro.tm.parser.Parser {
     NullName(q, name)
   }
 
-  def generic_parameters: Parser[SeparatedList] = *?(name ~ ",") ~ name ^^ { parsed =>
+  def generic_parameters: Parser[SeparatedList[Name]] = *?(name ~ ",") ~ name ^^ { parsed =>
     val (list, expr) = parsed
     SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
@@ -70,7 +70,7 @@ object Grammar extends syspro.tm.parser.Parser {
     AlmostGeneric(identifier, left, params)
   }
 
-  case class AlmostGeneric(identifier: Terminal, left: Terminal, parameters: SeparatedList)
+  case class AlmostGeneric(identifier: Terminal, left: Terminal, parameters: SeparatedList[Name])
   case class IncompleteGenericParams(params: List[PTree], incomplete: AlmostGeneric)
 
   def generic: Parser[GenericName] = IDENTIFIER ~ "<" ~ generic_parameters ~ ">" ^^ { parsed =>
@@ -90,29 +90,29 @@ object Grammar extends syspro.tm.parser.Parser {
     val nested_generic = GenericName(incomplete.identifier, incomplete.left, incomplete.parameters, gt_nested)
 
     // construct generic name
-    val complete_params = SeparatedList((nested_generic :: params.params.reverse).reverse)
+    val complete_params = SeparatedList[Name]((nested_generic :: params.params.reverse).reverse)
 
     GenericName(i, lt, complete_params, gt)
   }
 
   def generic_name: Parser[GenericName] = generic <|> nested_generic 
 
-  def separatedList_expr_comma: Parser[SeparatedList] = *?(expression ~ ",") ~ expression ^^ { parsed =>
+  def separatedList_expr_comma: Parser[SeparatedList[Expression]] = *?(expression ~ ",") ~ expression ^^ { parsed =>
     val (list, expr) = parsed
     SeparatedList((expr :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
 
-  def separatedList_name_amper: Parser[SeparatedList] = *?(name ~ "&") ~ name ^^ { parsed =>
+  def separatedList_name_amper: Parser[SeparatedList[Name]] = *?(name ~ "&") ~ name ^^ { parsed =>
     val (list, amper) = parsed
     SeparatedList((amper :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
 
-  def separatedList_parameterDef_comma: Parser[SeparatedList] = *?(parameter_def ~ ",") ~ parameter_def ^^ { parsed =>
+  def separatedList_parameterDef_comma: Parser[SeparatedList[ParameterDef]] = *?(parameter_def ~ ",") ~ parameter_def ^^ { parsed =>
     val (list, comma) = parsed
     SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse )
   }
 
-  def separatedList_typeParameterDef_comma: Parser[SeparatedList] = *?(type_param_def ~ ",") ~ type_param_def ^^ { parsed =>
+  def separatedList_typeParameterDef_comma: Parser[SeparatedList[TypeParamDef]] = *?(type_param_def ~ ",") ~ type_param_def ^^ { parsed =>
     val (list, comma) = parsed
     SeparatedList((comma :: list.flatten((a, b) => List(a, b)).reverse).reverse)
   }
@@ -147,7 +147,7 @@ object Grammar extends syspro.tm.parser.Parser {
 
   private def _index_expr: Parser[PrimaryContainer] = "[" ~ expression ~ "]" ^^ (parsed => IndexExprContainer(parsed._1._1, parsed._1._2, parsed._2))
 
-  def eps_empty_list: Parser[SeparatedList] = eps ^^ { parsed =>
+  def eps_empty_list: Parser[SeparatedList[Expression]] = eps ^^ { parsed =>
    SeparatedList(List.empty)
   }
   def _invoke: Parser[PrimaryContainer] = "(" ~ (separatedList_expr_comma <|> eps_empty_list) ~ ")" ^^ (parsed => InvokeContainer(parsed._1._1, parsed._1._2, parsed._2))
@@ -250,7 +250,7 @@ object Grammar extends syspro.tm.parser.Parser {
       VariableDef(md, identifier, type_name, assignment_opt)
   }
 
-  def parameter_def: Parser[Definition] = IDENTIFIER ~ COLON ~ name ^^ {
+  def parameter_def: Parser[ParameterDef] = IDENTIFIER ~ COLON ~ name ^^ {
     parsed =>
       val ((identifier, colon), name) = parsed
       ParameterDef(identifier, colon, name)
@@ -357,7 +357,7 @@ object Grammar extends syspro.tm.parser.Parser {
 
   case class IndexExprContainer(lb: Terminal, expr: Expression, rb: Terminal)     extends PrimaryContainer
 
-  case class InvokeContainer(lb: Terminal, sep_list: SeparatedList, rb: Terminal) extends PrimaryContainer
+  case class InvokeContainer(lb: Terminal, sep_list: SeparatedList[Expression], rb: Terminal) extends PrimaryContainer
 
   case class PResult(root: SyntaxNode, invalidRanges: java.util.List[TextSpan], diagnostics: java.util.List[Diagnostic]) extends ParseResult
   override def parse(s: String): ParseResult = {

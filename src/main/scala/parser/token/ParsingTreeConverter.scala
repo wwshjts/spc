@@ -139,7 +139,7 @@ object ParsingTreeConverter {
         case _: TypeDefinition => SyntaxKind.TYPE_DEFINITION
       case supplementary: Supplementary => throw IllegalStateException("Supplementary doesn't have any syntax kind")
       case proto: ProtoList => proto match
-        case _: SeparatedList => SyntaxKind.SEPARATED_LIST
+        case _: SeparatedList[_] => SyntaxKind.SEPARATED_LIST
         case _: GrammarList   => SyntaxKind.LIST
       case _: TypeBound => SyntaxKind.TYPE_BOUND
 }
