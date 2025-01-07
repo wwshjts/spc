@@ -241,7 +241,7 @@ case class SuperExpr(op: Terminal)              extends LiteralExpr(op)
 case class NullLiteral(op: Terminal)            extends LiteralExpr(op)
 
 case class IdentifierName(op: Terminal)                 extends UnaryBranch(op) with Name
-case class OptionName(op: Terminal, name: PTree)  extends BinaryBranch(op, name) with Name
+case class NullName(op: Terminal, name: PTree)  extends BinaryBranch(op, name) with Name
 case class GenericName(i: Terminal, l: Terminal, separatedList: SeparatedList, r: Terminal) extends VarargBranch(i, l, separatedList, r) with Name
 
 case class GroupBy(leftb: Terminal, expr: PTree, rightb: Terminal)              extends TernaryBranch(leftb, expr, rightb) with Primary
@@ -460,7 +460,9 @@ object TypeDefinition {
   }
 }
 
-case class SourceText(text: GrammarList) extends Grammar with UnaryBranch(text)
+case class SourceText(text: GrammarList) extends Grammar with UnaryBranch(text) {
+  def typeDefinitions: List[TypeDefinition] = text.trees.map(_.asInstanceOf[TypeDefinition])
+}
 
 // ============================= Syntax ==========================
 

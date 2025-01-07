@@ -47,11 +47,11 @@ object Grammar extends syspro.tm.parser.Parser {
   <|> keyword_terminal <|> symbol_terminal
 
   // Name expressions
-  def name: Parser[Name] =  option_name <|> generic_name <|> identifier_name
+  def name: Parser[Name] =  nullability_name <|> generic_name <|> identifier_name
   def identifier_name: Parser[IdentifierName] = IDENTIFIER ^^ IdentifierName
-  def option_name: Parser[OptionName]  = "?" ~ name ^^ { parsed =>
+  def nullability_name: Parser[NullName]  = "?" ~ name ^^ { parsed =>
     val (q, name) = parsed
-    OptionName(q, name)
+    NullName(q, name)
   }
 
   def generic_parameters: Parser[SeparatedList] = *?(name ~ ",") ~ name ^^ { parsed =>
@@ -273,7 +273,7 @@ object Grammar extends syspro.tm.parser.Parser {
     IDENTIFIER ~ ?("<" ~ separatedList_typeParameterDef_comma ~ ">") ~ ?(type_bound) ~ ?(block(function_def <|> variable_def)) ^^ { parsed =>
 
     // TODO: merge Separated list and grammar list nodes add seplist block to rule
-    val ((((mod, name), seplist_opt), bound_opt), block)  = parsed
+    val ((((mod, name), seplist_opt), bound_opt), block) = parsed
 
     val sepList = seplist_opt.map(p => p._1._1 :: p._1._2 :: p._2 :: Nil).getOrElse(List.empty)
 

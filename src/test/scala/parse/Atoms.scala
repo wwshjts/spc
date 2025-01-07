@@ -163,7 +163,7 @@ class Atoms extends AnyFunSuite {
 
     val expected =
       Success(
-        OptionName(
+        NullName(
           QUESTION(input(0)),
           IdentifierName(IDENTIFIER(input(1)))
         ),List()

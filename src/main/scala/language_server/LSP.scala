@@ -7,7 +7,7 @@ import lexer.Lexer
 import parser.grammar.Grammar
 import parser.grammar.Grammar.{PResult, expression, variable_def}
 
-import org.syspro.spc.parser.parsing_tree.{FunctionDef, GenericName, IDENTIFIER, IdentifierName, OptionName, PTree, VariableDef}
+import org.syspro.spc.parser.parsing_tree.{FunctionDef, GenericName, IDENTIFIER, IdentifierName, NullName, PTree, SourceText, TypeDefinition, VariableDef}
 import syspro.tm.parser.{Diagnostic, SyntaxKind, SyntaxNode, TextSpan}
 import syspro.tm.symbols.{SemanticSymbol, SymbolKind, TypeSymbol, VariableSymbol}
 
@@ -31,27 +31,6 @@ object LSP extends symbols.LanguageServer {
     override def lookupType(name: String): TypeSymbol = ???
   }
 
-  type Scope = TypeSemantic | FunctionSemantic
-
-  extension (s: Scope) {
-    def addMember(variableSemantic: VariableSemantic): Unit = s match
-      case t: TypeSemantic => t.members.add(variableSemantic)
-      case f: FunctionSemantic => f.locals.add(variableSemantic)
-  }
-
-  extension  (s: Scope) {
-    def get: SemanticSymbol = s match
-      case t: TypeSemantic => t
-      case f: FunctionSemantic => f
-  }
-
-  type NameTable = mutable.Map[PTree, SemanticSymbol]
-  /**
-   * Context of LSP
-   *
-   * Used to transfer state of LSP between LSP functions
-   */
-  case class Context(scope: TypeSemantic)
   override def buildModel(code: String): symbols.SemanticModel = {
     val resultOfParsing = Grammar.parse(code)
     val tree = resultOfParsing.root()
@@ -62,66 +41,66 @@ object LSP extends symbols.LanguageServer {
     ???
   }
 
-  def lookUp(): TypeSymbol = ???
-
-
-  /**
-   *
-   * @param functionDef functionDefinition without any semantic
-   * @return new `FunctionDef` that actually have semantic
-   */
-  def concreteFunction(functionDef: FunctionDef)(scope: Scope): FunctionDef = {
-    val funcName = functionDef.name.asInstanceOf[IDENTIFIER].tkn.toString
-
-    val f = FunctionSemantic(
-      mods = ???,
-      parameters = ???,
-      returnType = {
-        functionDef.ret_type match
-          case IdentifierName(op) => if builtInTypes contains op.token().toString then null else lookUp()
-          case OptionName(op, name) => ???
-          case GenericName(i, l, separatedList, r) => if builtInTypes contains i.token().toString then null else lookUp()
-      },
-      locals = new util.ArrayList[VariableSymbol](), // will be added when function scope travers will be performed
-      owner = scope.get,
-      kind = SymbolKind.FUNCTION,
-      name = funcName,
-      definition = functionDef
-    )
-
-    functionDef.addSemantic(f)
+  def buildSemanticModel(root: SourceText): symbols.SemanticModel = {
+    ???
   }
 
-  /**
-   *
-   * @param variableDef variable definition without semantic
-   * @return `VariableDef` with computed semantic
-   */
-  def concreteVariable(variableDef: VariableDef)(using scope: Scope): VariableDef = {
-    val typeName = variableDef.type_name match {
-      case IdentifierName(op) => op.asInstanceOf[IDENTIFIER].tkn.toString
-      case OptionName(op, name) => ???
-      case GenericName(i, l, separatedList, r) => i.asInstanceOf[IDENTIFIER].tkn.toString
+  private def buildNameTable(types: List[TypeDefinition]): Map[String, TypeDefinition] =
+    types.map(t => t.identifier.token().toString -> t).toMap
+
+  def extractTypes(types: List[TypeDefinition]): List[Type] = {
+
+    /*
+    case class RawType(tp: Type, directBaseNames: List[String]) {
+      def isDerived: Boolean = directBaseNames.nonEmpty
+      def numOfDirectBaseTypes: Int = directBaseNames.length
+      def name: String = tp.name()
     }
 
+    case class Context private (unresolved: mutable.Map[String, RawType], nameTable: mutable.Map[String, RawType]) {
+      def register(rt: RawType): Unit = {
+        for (directBase <- rt.directBaseNames) { unresolved += directBase -> rt }
+        nameTable += rt.name -> rt
+      }
+      def resolved: Boolean = unresolved.empty
+    }
 
-    val typeSemantic = if builtInTypes contains typeName then null else lookUp()
+    case object Context {
+      def empty: Context = new Context(mutable.Map.empty, mutable.Map.empty)
+    }
 
-    val semantic = VariableSemantic(
-      `type` = typeSemantic,
-      kind = {
-        scope match
-          case t: TypeSemantic => SymbolKind.FIELD
-          case f: FunctionSemantic => SymbolKind.LOCAL
-      },
-      name = variableDef.identifier.toString,
-      definition = variableDef,
-      owner = scope.get
-    )
+    case object RawType {
+      def apply(typeDefinition: TypeDefinition)(using ctx: Context): RawType = {
+        ???
+      }
+    }
 
-    scope.addMember(semantic)
+    def extractRaw(types: List[TypeDefinition])(using ctx: Context): List[RawType] = types match
+      case head :: next => RawType(head) :: extractRaw(next)
+      case Nil => Nil
 
-    variableDef.addSemantic(semantic)
+    /**
+     * @param name
+     * @param ctx
+     * @return
+     */
+    def resolveBase(name: String)(using ctx: Context): Option[Type] = {
+      if ctx.unresolved contains name then
+        val rawType = ctx.unresolved(name)
+        if !rawType.isDerived then
+          ctx.resolved += rawType.name -> rawType.tp
+          Some(rawType.tp)
+        else
+          val baseTypes = rawType.directBaseNames.map(resolveBase).filter(_.nonEmpty).map(_.get)
+          Some(rawType.tp.ofBaseTypes(baseTypes))
+      else
+        ???
+    }
+
+     */
+    ???
   }
+
+
 }
 

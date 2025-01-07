@@ -90,7 +90,7 @@ object ParsingTreeConverter {
               case SuperExpr(_) => SyntaxKind.SUPER_EXPRESSION
           case name: Name => name match
             case _: IdentifierName => SyntaxKind.IDENTIFIER_NAME_EXPRESSION
-            case _: OptionName => SyntaxKind.OPTION_NAME_EXPRESSION
+            case _: NullName => SyntaxKind.OPTION_NAME_EXPRESSION
             case _: GenericName => SyntaxKind.GENERIC_NAME_EXPRESSION
           case _: GroupBy => SyntaxKind.PARENTHESIZED_EXPRESSION
           case _: MemberAccess => SyntaxKind.MEMBER_ACCESS_EXPRESSION
