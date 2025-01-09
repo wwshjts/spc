@@ -9,9 +9,8 @@ import syspro.tm.symbols.{LanguageServer, SemanticModel}
 def main(): Unit = {
   //Tasks.Lexer.registerSolution(new SpcLexer(),  new TestMode().strict(true))
 //  WebServer.start()
-  Tasks.Parser.registerSolution(Grammar)
+  //Tasks.Parser.registerSolution(Grammar)
 //  WebServer.waitForWebServerExit()
-/*
   class FakeLsp extends LanguageServer {
     override def buildModel(code: String): SemanticModel = {
       println(code)
@@ -20,7 +19,5 @@ def main(): Unit = {
   }
 
   Tasks.LanguageServer.registerSolution(FakeLsp())
-
- */
 }
 
