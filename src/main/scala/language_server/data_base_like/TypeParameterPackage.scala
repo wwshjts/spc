@@ -10,7 +10,7 @@ trait TypeParameterPackage { this: Universe =>
     override def substitute(other: TypeVariable): TypeVariable = copy(name = other.name, definition = other.definition)
   }
 
-  override def TypeVariable(tp: TypeParamDef): TypeVariable = {
+  override def createTypeVariable(tp: TypeParamDef): TypeVariable = {
     import ExtractionUtils.*
     TypeVariableImpl(
       name = tp.name,
@@ -19,13 +19,14 @@ trait TypeParameterPackage { this: Universe =>
     )
   }
 
-  override def TypeVariable(n: Name): Result[TypeVariable] = {
+  override def createTypeVariable(n: Name): Option[TypeVariable] = {
     import ExtractionUtils.*
     if n.typeParams.nonEmpty then
       val description = s"There is no type bound when instantiating type parameter"
-      Left(commitSemanticError(description, n.firstTerminal().token().start, n.lastTerminal().token().end))
+      commitSemanticError(description, n.firstTerminal().token().start, n.lastTerminal().token().end)
+      None
     else
-      Right(
+      Some(
         TypeVariableImpl(
           name = n.nameOfType,
           definition = n,

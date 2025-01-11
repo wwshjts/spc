@@ -14,11 +14,9 @@ trait TypePackage { this: Universe =>
 
     override def typeArguments: List[TypeLike] = ???
 
-    override def derive(projection: List[TypeLike]): Result[Type] = ???
+    override def lookUpTypeVariable(name: String): Option[TypeVariable] = ???
 
-    override def lookUpTypeParameter(name: String): Option[TypeLike] = ???
-
-
+    override def derive(projection: List[TypeVariable]): Option[Type] = ???
   }
 
   private val actualTypes: mutable.Map[String, TypeImpl] = mutable.Map.empty
@@ -26,8 +24,6 @@ trait TypePackage { this: Universe =>
   case class RawType(override val name: String, override val definition: TypeDefinition, override val typeVariables: List[TypeVariable]) extends TypeImpl {
     // TODO: do this functionality with trait
     val localVariables = typeVariables.map(tv => tv.name -> tv).toMap
-
-    override def lookUpTypeVariable(name: String): Option[TypeLike] = localVariables.get(name)
   }
 
   case class TypeWithSuperTypes(override val name: String, override val definition: TypeDefinition, override val typeVariables: List[TypeVariable], override val directSuperTypes: List[TypeWithSuperTypes]) extends TypeImpl {
@@ -47,13 +43,22 @@ trait TypePackage { this: Universe =>
 
         Some(copy(typeVariables = newVars.toList))
     }
+
+    override def toString: String =
+      s"""
+         |Type: $name
+         |SuperTypes:
+         |  ${directSuperTypes}
+         |TypeVariables:
+         |  ${typeVariables}
+         |""".stripMargin
   }
 
   override def commitType(typeDefinition: TypeDefinition): Unit = {
     val rt = RawType (
       name = typeDefinition.name,
       definition = typeDefinition,
-      typeVariables = typeDefinition.params.dropSeparators.map(createTypeVariable)
+      typeVariables = typeDefinition.parameterDefinitions.map(createTypeVariable)
     )
 
     actualTypes += rt.name -> rt
@@ -66,16 +71,15 @@ trait TypePackage { this: Universe =>
   // concrete any type to complete type, or fails
   override def lookUpType(name: String): Option[TypeWithSuperTypes] = {
     if (actualTypes contains name) then
-      val found = actualTypes(name)
-      actualTypes(name) match
+      val found = actualTypes(name) match
         case rt: RawType => concreteBases(rt)
-        case tt: TypeWithSuperTypes => Some(tt)
+        case tt: TypeWithSuperTypes => tt
+      Some(found)
     else
       None
   }
 
-  private def concreteBases(rt: RawType): Option[TypeWithSuperTypes] = {
-
+  private def concreteBases(rt: RawType): TypeWithSuperTypes = {
     def lookUpAndCommitError(name: Name) = {
       val r = lookUpType(name.nameOfType)
 
@@ -85,24 +89,27 @@ trait TypePackage { this: Universe =>
       r
     }
 
-
     val symbolicBases: List[Name] = rt.definition.directBases
 
     // list of resolved bases
-    val bases: List[(Name, TypeWithSuperTypes)] = symbolicBases.map(name => (name, lookUpAndCommitError(name.nameOfType))).flatMap(t => t._2 match
-      case Some(value) => List(t._1, value)
-      case None => List.empty
+    val bases: List[(Name, TypeWithSuperTypes)] = symbolicBases.map{
+      name => (name, lookUpAndCommitError(name))
+    }.flatMap(t =>
+      t._2 match
+        case Some(value) => List((t._1, value))
+        case None => List.empty
     )
 
-    val res = mutable.ListBuffer.empty[TypeWithSuperTypes]
-    // substitute typeParameters if there is
 
+    val res = mutable.ListBuffer.empty[TypeWithSuperTypes]
+
+    // substitute typeParameters if there is
     for((n, t) <- bases) {
-      val s = n.typeParams.map(name => createTypeVariable(name))
+      t.derive(n.typeParams.map(name => createTypeVariable(name)).flatMap(_.toList)).foreach(tp => res += tp)
     }
 
-
+    // after that only correctly resolved supertypes are here
+    TypeWithSuperTypes(name = rt.name, definition = rt.definition, typeVariables = rt.typeVariables, directSuperTypes = res.toList)
   }
 
-  private def checkTypeParams(tt: TypeWithSuperTypes): CompleteType = ???
 }

@@ -28,7 +28,7 @@ trait Universe {
 
     def typeArguments: List[TypeLike]
 
-    def derive(projection: List[TypeLike]): Result[Type]
+    def derive(projection: List[TypeVariable]): Option[Type]
 
     def lookUpTypeVariable(name: String): Option[TypeVariable]
   }
@@ -43,7 +43,9 @@ trait Universe {
     def substitute(other: TypeVariable): TypeVariable
   }
 
-  sealed abstract class FunctionNode
+  abstract class FunctionNode
+
+  abstract class VariableNode
 
   abstract class SemanticErrorNode {
     val description: String
@@ -59,9 +61,9 @@ trait Universe {
 
   def createTypeVariable(typeParameterDef: TypeParamDef): TypeVariable
 
-  def createTypeVariable(name: Name): Result[TypeVariable]
+  def createTypeVariable(name: Name): Option[TypeVariable]
 
-  def lookUpType(name: String): Result[Type]
+  def lookUpType(name: String): Option[Type]
 
   def containsType(name: String): Boolean
 

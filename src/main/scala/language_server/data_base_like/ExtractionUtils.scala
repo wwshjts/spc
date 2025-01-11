@@ -17,13 +17,20 @@ object ExtractionUtils {
   }
 
   extension (typeBound: TypeBound) {
-    def listOfBounds: List[Name] =  typeBound.separatedList.dropSeparators
+    def listOfBounds: List[Name] =
+      if typeBound == null then
+        List.empty
+      else
+        typeBound.separatedList.dropSeparators
   }
 
   extension (typeParameterDefinition: TypeParamDef) {
     def name: String = typeParameterDefinition.identifier.token().toString
   }
 
+  extension (sourceText: SourceText) {
+    def typeDefinitions: List[TypeDefinition] = sourceText.text.trees.map(_.asInstanceOf[TypeDefinition])
+  }
 
   extension (typeDefinition: TypeDefinition) {
     def name: String = typeDefinition.identifier.token().toString

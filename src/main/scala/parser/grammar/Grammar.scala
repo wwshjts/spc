@@ -280,7 +280,7 @@ object Grammar extends syspro.tm.parser.Parser {
     TypeDefinition(mod, name, sepList, bound_opt, block)
   }
 
-  def source_text: Parser[PTree] = |**(type_def) ^^ { parsed =>
+  def source_text: Parser[SourceText] = |**(type_def) ^^ { parsed =>
     SourceText(GrammarList(parsed))
   }
 

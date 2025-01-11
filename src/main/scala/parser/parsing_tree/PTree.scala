@@ -211,7 +211,7 @@ case class INTERFACE(tkn: Token)      extends TypeModifier(tkn)
 // some real shit
 sealed abstract class ProtoList(trees: List[PTree]) extends ListVararg(trees) with Grammar
 case class SeparatedList[A] private (trees: List[PTree]) extends ProtoList(trees) {
-  def dropSeparators: List[A] = trees.zipWithIndex.filter(_._2 % 2 == 0).map(_.asInstanceOf[A])
+  def dropSeparators: List[A] = trees.zipWithIndex.filter(_._2 % 2 == 0).map(_._1.asInstanceOf[A])
 }
 
 // It is done only for checker module compatibility
