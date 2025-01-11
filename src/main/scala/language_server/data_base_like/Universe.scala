@@ -52,7 +52,7 @@ trait Universe {
 
     def substitute(other: TypeVariable): TypeVariable
 
-    def instantiate(arg: Type): Option[Type]
+    def instantiate(arg: Type): Result[Type]
 
     override def toString: String = toFormatted(1)
     def toFormatted(tab: Int): String
@@ -88,6 +88,11 @@ trait Universe {
   def commitSemanticError(description: String, start: Int, end: Int): SemanticError = commitSemanticError(description, start, end, List.empty)
 
   def commitSemanticError(description: String, start: Int, end: Int, reasons: List[SemanticError]): SemanticError
+
+  def commitSemanticError(description: String, pTree: PTree): SemanticError = commitSemanticError(description, pTree, List.empty)
+
+  def commitSemanticError(description: String, pTree: PTree, reasons: List[SemanticError]): SemanticError =
+    commitSemanticError(description, pTree.firstTerminal().token().start, pTree.lastTerminal().token().end, reasons)
 
   def getErrors: List[SemanticError]
 

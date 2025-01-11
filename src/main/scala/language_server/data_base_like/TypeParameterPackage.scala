@@ -10,7 +10,7 @@ trait TypeParameterPackage { this: Universe =>
     override def substitute(other: TypeVariable): TypeVariable = copy(name = other.name, definition = other.definition)
 
 
-    override def instantiate(arg: Type): Option[Type] = {
+    override def instantiate(arg: Type): Result[Type] = {
         val satisfiesBounds = typeBounds.forall {
           case bound: Type => arg.isSubtypeOf(bound)
           case bound: TypeVariable =>
@@ -20,7 +20,12 @@ trait TypeParameterPackage { this: Universe =>
             false
         }
 
-        if satisfiesBounds then Some(arg) else None
+        if satisfiesBounds then
+          Right(arg)
+        else
+          // TODO: add reasons
+          val desc = s"Can't instantiate typeVariable $name"
+          Left(commitSemanticError(desc, definition))
     }
 
     override def toFormatted(tab: Int): String =

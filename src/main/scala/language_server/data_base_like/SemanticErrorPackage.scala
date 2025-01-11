@@ -5,7 +5,7 @@ import scala.collection.mutable
 trait SemanticErrorPackage { this: Universe =>
   override type SemanticError = SemanticErrorImpl
 
-  private val errors: mutable.ListBuffer[SemanticError] = mutable.ListBuffer.empty
+  private val errors: mutable.Set[SemanticError] = mutable.Set.empty
 
   case class SemanticErrorImpl(description: String, start: Int, end: Int, reasons: List[SemanticError]) extends SemanticErrorNode {
     def appendReason(semanticError: SemanticError): SemanticError = copy(reasons = semanticError :: reasons)
