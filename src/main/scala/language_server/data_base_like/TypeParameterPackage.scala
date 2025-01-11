@@ -9,7 +9,19 @@ trait TypeParameterPackage { this: Universe =>
   final case class TypeVariableImpl(name: String, definition: PTree, typeBounds: List[TypeLike]) extends TypeVariableNode {
     override def substitute(other: TypeVariable): TypeVariable = copy(name = other.name, definition = other.definition)
 
-    override def toString: String = toFormatted(1)
+
+    override def instantiate(arg: Type): Option[Type] = {
+        val satisfiesBounds = typeBounds.forall {
+          case bound: Type => arg.isSubtypeOf(bound)
+          case bound: TypeVariable =>
+            // TODO: actually it can be done
+            val desc = s"Type argument ${arg} can't be bounded by type variable $bound"
+            commitSemanticError(desc, definition.firstTerminal().token().start, definition.lastTerminal().token().end)
+            false
+        }
+
+        if satisfiesBounds then Some(arg) else None
+    }
 
     override def toFormatted(tab: Int): String =
       val title = " " * tab + s"TypeVariable: $name"

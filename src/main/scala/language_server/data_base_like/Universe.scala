@@ -22,21 +22,27 @@ trait Universe {
 
     val definition: TypeDefinition
 
-    val typeVariables: List[TypeVariable]
+    val typeArguments: List[TypeLike]
 
     def directSuperTypes: List[Type]
 
-    def typeArguments: List[TypeLike]
+    def derive(projection: List[TypeLike]): Option[Type]
 
-    def derive(projection: List[TypeVariable]): Option[Type]
+    def isSubtypeOf(other: Type): Boolean
 
-    def lookUpTypeVariable(name: String): Option[TypeVariable]
+    def superTypes(): Set[Type]
 
     def toFormatted(tab: Int): String
 
     override def toString: String = toFormatted(1)
   }
 
+  extension (tl: TypeLike) {
+    def toFormatted(tab: Int): String =
+      tl match
+        case tv: TypeVariable => tv.toFormatted(tab)
+        case t: Type => t.toFormatted(tab)
+  }
   abstract class TypeVariableNode {
     val name: String
 
@@ -46,8 +52,11 @@ trait Universe {
 
     def substitute(other: TypeVariable): TypeVariable
 
+    def instantiate(arg: Type): Option[Type]
+
     override def toString: String = toFormatted(1)
     def toFormatted(tab: Int): String
+
   }
 
   abstract class FunctionNode
@@ -64,6 +73,8 @@ trait Universe {
 
   def commitType(typeDefinition: TypeDefinition): Unit
 
+  def commitTypes(typeDefinitions: List[TypeDefinition]): Unit
+
   def createFunction(functionDefinition: FunctionDef): Function
 
   def createTypeVariable(typeParameterDef: TypeParamDef): TypeVariable
@@ -77,10 +88,6 @@ trait Universe {
   def commitSemanticError(description: String, start: Int, end: Int): SemanticError = commitSemanticError(description, start, end, List.empty)
 
   def commitSemanticError(description: String, start: Int, end: Int, reasons: List[SemanticError]): SemanticError
-
-  def typeAnalys: Unit
-
-  def functionAnalys: Unit
 
   def getErrors: List[SemanticError]
 

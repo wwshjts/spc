@@ -7,7 +7,5 @@ class Analyzer extends Universe with TypePackage with SemanticErrorPackage with 
 
   override def containsType(name: String): Boolean = ???
 
-  override def typeAnalys: Unit = ???
-
-  override def functionAnalys: Unit = ???
+  override def lookUpType(name: String): Option[Type] = ???
 }
