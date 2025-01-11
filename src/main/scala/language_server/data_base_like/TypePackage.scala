@@ -17,6 +17,8 @@ trait TypePackage { this: Universe =>
     override def lookUpTypeVariable(name: String): Option[TypeVariable] = ???
 
     override def derive(projection: List[TypeVariable]): Option[Type] = ???
+
+    override def toFormatted(tab: Int): String = ???
   }
 
   private val actualTypes: mutable.Map[String, TypeImpl] = mutable.Map.empty
@@ -44,14 +46,12 @@ trait TypePackage { this: Universe =>
         Some(copy(typeVariables = newVars.toList))
     }
 
-    override def toString: String =
-      s"""
-         |Type: $name
-         |SuperTypes:
-         |  ${directSuperTypes}
-         |TypeVariables:
-         |  ${typeVariables}
-         |""".stripMargin
+    override def toFormatted(tab: Int): String =
+      val title = " " * tab + s"Type: $name"
+      val st = " " * tab + "SuperTypes: \n" + directSuperTypes.map(dst => dst.toFormatted(tab * 2)).mkString
+      val tv = " " * tab + "TypeVariables: \n" + typeVariables.map(tv => tv.toFormatted(tab * 2)).mkString
+
+      "\n" + title + "\n" + st + "\n" + tv + "\n"
   }
 
   override def commitType(typeDefinition: TypeDefinition): Unit = {
@@ -84,7 +84,7 @@ trait TypePackage { this: Universe =>
       val r = lookUpType(name.nameOfType)
 
       if r.isEmpty then
-        commitSemanticError(s"In definition of: ${rt.name}. Can't find base class: $name", name.firstTerminal().token().start, name.lastTerminal().token().end)
+        commitSemanticError(s"In definition of: ${rt.name}. Can't find base class: ${name.nameOfType}", name.firstTerminal().token().start, name.lastTerminal().token().end)
 
       r
     }
@@ -99,7 +99,6 @@ trait TypePackage { this: Universe =>
         case Some(value) => List((t._1, value))
         case None => List.empty
     )
-
 
     val res = mutable.ListBuffer.empty[TypeWithSuperTypes]
 

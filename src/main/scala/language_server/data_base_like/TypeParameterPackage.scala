@@ -8,6 +8,13 @@ trait TypeParameterPackage { this: Universe =>
 
   final case class TypeVariableImpl(name: String, definition: PTree, typeBounds: List[TypeLike]) extends TypeVariableNode {
     override def substitute(other: TypeVariable): TypeVariable = copy(name = other.name, definition = other.definition)
+
+    override def toString: String = toFormatted(1)
+
+    override def toFormatted(tab: Int): String =
+      val title = " " * tab + s"TypeVariable: $name"
+      val bounds = " " * tab + "Bounds: " + typeBounds.map(f => s"$f ").mkString
+      "\n" + title + "\n" + bounds + "\n"
   }
 
   override def createTypeVariable(tp: TypeParamDef): TypeVariable = {
@@ -15,7 +22,7 @@ trait TypeParameterPackage { this: Universe =>
     TypeVariableImpl(
       name = tp.name,
       definition = tp,
-      typeBounds = tp.type_bound.listOfBounds.map(typeName => TypeVariableImpl(typeName.nameOfType, typeName, null))
+      typeBounds = tp.type_bound.listOfBounds.map(typeName => TypeVariableImpl(typeName.nameOfType, typeName, List.empty))
     )
   }
 

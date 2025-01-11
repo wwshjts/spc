@@ -15,4 +15,6 @@ trait SemanticErrorPackage { this: Universe =>
     val s = SemanticErrorImpl(description, start, end, reasons)
     errors += s
     s
+
+  override def getErrors: List[SemanticError] = errors.toList
 }

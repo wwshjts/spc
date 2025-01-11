@@ -31,6 +31,10 @@ trait Universe {
     def derive(projection: List[TypeVariable]): Option[Type]
 
     def lookUpTypeVariable(name: String): Option[TypeVariable]
+
+    def toFormatted(tab: Int): String
+
+    override def toString: String = toFormatted(1)
   }
 
   abstract class TypeVariableNode {
@@ -41,6 +45,9 @@ trait Universe {
     val typeBounds: List[TypeLike]
 
     def substitute(other: TypeVariable): TypeVariable
+
+    override def toString: String = toFormatted(1)
+    def toFormatted(tab: Int): String
   }
 
   abstract class FunctionNode
@@ -74,6 +81,8 @@ trait Universe {
   def typeAnalys: Unit
 
   def functionAnalys: Unit
+
+  def getErrors: List[SemanticError]
 
 
 }
